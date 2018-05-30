@@ -19,7 +19,7 @@ func (cb *CodeBlock) Printf(fmt string, args ...interface{}) *CodeBlock {
 }
 
 func (cb *CodeBlock) Printlnf(fmt string, args ...interface{}) *CodeBlock {
-	return cb.Printf(fmt + "\n", args...)
+	return cb.Printf(fmt+"\n", args...)
 }
 
 func Print(text string) *CodeBlock {

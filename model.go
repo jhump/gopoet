@@ -58,16 +58,16 @@ type GoFile struct {
 
 	// The name of the file. This should not include a path, only a file
 	// name with a ".go" extension.
-	Name                string
+	Name string
 	// Doc comments that will appear before the package declaration.
-	PackageComment      string
+	PackageComment string
 	// The package name that will be used in the package declaration.
-	PackageName         string
+	PackageName string
 	// The canonical import path which, if non-empty, will be used in an
 	// annotation comment immediately following the package declaration.
 	CanonicalImportPath string
 	// The actual elements declared in the source file.
-	elements            []FileElement
+	elements []FileElement
 }
 
 func NewGoFile(fileName, packagePath, packageName string) *GoFile {
@@ -269,7 +269,7 @@ func NewTypeSpec(typeName string, t TypeName) *TypeSpec {
 	case KindInterface:
 		embeds := t.Embeds()
 		methods := t.Methods()
-		elements := make([]InterfaceElement, len(embeds) + len(methods))
+		elements := make([]InterfaceElement, len(embeds)+len(methods))
 		for i, e := range embeds {
 			elements[i] = &InterfaceEmbed{
 				parent: ret,
@@ -329,7 +329,7 @@ func NewInterfaceTypeSpec(typeName string, elements ...InterfaceElement) *TypeSp
 type FieldSpec struct {
 	Comment string
 	FieldType
-	parent  *TypeSpec
+	parent *TypeSpec
 }
 
 type InterfaceElement interface {
@@ -358,7 +358,7 @@ func (e *InterfaceEmbed) setParent(t *TypeSpec) {
 type InterfaceMethod struct {
 	Comment, Name string
 	Signature
-	parent        *TypeSpec
+	parent *TypeSpec
 }
 
 func NewInterfaceMethod(name string) *InterfaceMethod {
@@ -392,7 +392,7 @@ type FuncSpec struct {
 	Comment, Name string
 	Signature
 	CodeBlock
-	parent        *GoFile
+	parent *GoFile
 }
 
 func (f *FuncSpec) Symbol() *Symbol {

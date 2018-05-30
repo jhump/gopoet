@@ -142,35 +142,35 @@ type basicTypeName reflect.Kind
 
 var _ TypeName = basicTypeName(0)
 
-func (t basicTypeName) Kind() TypeKind { return KindBasic }
-func (t basicTypeName) Symbol() *Symbol { return nil }
-func (t basicTypeName) Elem() TypeName { return nil }
-func (t basicTypeName) Key() TypeName { return nil }
-func (t basicTypeName) Len() int64 { return -1 }
-func (t basicTypeName) Dir() reflect.ChanDir { return 0 }
+func (t basicTypeName) Kind() TypeKind          { return KindBasic }
+func (t basicTypeName) Symbol() *Symbol         { return nil }
+func (t basicTypeName) Elem() TypeName          { return nil }
+func (t basicTypeName) Key() TypeName           { return nil }
+func (t basicTypeName) Len() int64              { return -1 }
+func (t basicTypeName) Dir() reflect.ChanDir    { return 0 }
 func (t basicTypeName) BasicKind() reflect.Kind { return reflect.Kind(t) }
-func (t basicTypeName) Signature() *Signature { return nil }
-func (t basicTypeName) Fields() []FieldType { return nil }
-func (t basicTypeName) Methods() []MethodType { return nil }
-func (t basicTypeName) Embeds() []TypeName { return nil }
-func (t basicTypeName) String() string { return typeNameToString(t) }
+func (t basicTypeName) Signature() *Signature   { return nil }
+func (t basicTypeName) Fields() []FieldType     { return nil }
+func (t basicTypeName) Methods() []MethodType   { return nil }
+func (t basicTypeName) Embeds() []TypeName      { return nil }
+func (t basicTypeName) String() string          { return typeNameToString(t) }
 
 type namedTypeName Symbol
 
 var _ TypeName = &namedTypeName{}
 
-func (t *namedTypeName) Kind() TypeKind { return KindNamed }
-func (t *namedTypeName) Symbol() *Symbol { return (*Symbol)(t) }
-func (t *namedTypeName) Elem() TypeName { return nil }
-func (t *namedTypeName) Key() TypeName { return nil }
-func (t *namedTypeName) Len() int64 { return -1 }
-func (t *namedTypeName) Dir() reflect.ChanDir { return 0 }
+func (t *namedTypeName) Kind() TypeKind          { return KindNamed }
+func (t *namedTypeName) Symbol() *Symbol         { return (*Symbol)(t) }
+func (t *namedTypeName) Elem() TypeName          { return nil }
+func (t *namedTypeName) Key() TypeName           { return nil }
+func (t *namedTypeName) Len() int64              { return -1 }
+func (t *namedTypeName) Dir() reflect.ChanDir    { return 0 }
 func (t *namedTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
-func (t *namedTypeName) Signature() *Signature { return nil }
-func (t *namedTypeName) Fields() []FieldType { return nil }
-func (t *namedTypeName) Methods() []MethodType { return nil }
-func (t *namedTypeName) Embeds() []TypeName { return nil }
-func (t *namedTypeName) String() string { return typeNameToString(t) }
+func (t *namedTypeName) Signature() *Signature   { return nil }
+func (t *namedTypeName) Fields() []FieldType     { return nil }
+func (t *namedTypeName) Methods() []MethodType   { return nil }
+func (t *namedTypeName) Embeds() []TypeName      { return nil }
+func (t *namedTypeName) String() string          { return typeNameToString(t) }
 
 type ptrTypeName struct {
 	elem TypeName
@@ -178,18 +178,18 @@ type ptrTypeName struct {
 
 var _ TypeName = ptrTypeName{}
 
-func (t ptrTypeName) Kind() TypeKind { return KindPtr }
-func (t ptrTypeName) Symbol() *Symbol { return nil }
-func (t ptrTypeName) Elem() TypeName { return t.elem }
-func (t ptrTypeName) Key() TypeName { return nil }
-func (t ptrTypeName) Len() int64 { return -1 }
-func (t ptrTypeName) Dir() reflect.ChanDir { return 0 }
+func (t ptrTypeName) Kind() TypeKind          { return KindPtr }
+func (t ptrTypeName) Symbol() *Symbol         { return nil }
+func (t ptrTypeName) Elem() TypeName          { return t.elem }
+func (t ptrTypeName) Key() TypeName           { return nil }
+func (t ptrTypeName) Len() int64              { return -1 }
+func (t ptrTypeName) Dir() reflect.ChanDir    { return 0 }
 func (t ptrTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
-func (t ptrTypeName) Signature() *Signature { return nil }
-func (t ptrTypeName) Fields() []FieldType { return nil }
-func (t ptrTypeName) Methods() []MethodType { return nil }
-func (t ptrTypeName) Embeds() []TypeName { return nil }
-func (t ptrTypeName) String() string { return typeNameToString(t) }
+func (t ptrTypeName) Signature() *Signature   { return nil }
+func (t ptrTypeName) Fields() []FieldType     { return nil }
+func (t ptrTypeName) Methods() []MethodType   { return nil }
+func (t ptrTypeName) Embeds() []TypeName      { return nil }
+func (t ptrTypeName) String() string          { return typeNameToString(t) }
 
 type sliceTypeName struct {
 	elem TypeName
@@ -197,18 +197,18 @@ type sliceTypeName struct {
 
 var _ TypeName = sliceTypeName{}
 
-func (t sliceTypeName) Kind() TypeKind { return KindSlice }
-func (t sliceTypeName) Symbol() *Symbol { return nil }
-func (t sliceTypeName) Elem() TypeName { return t.elem }
-func (t sliceTypeName) Key() TypeName { return nil }
-func (t sliceTypeName) Len() int64 { return -1 }
-func (t sliceTypeName) Dir() reflect.ChanDir { return 0 }
+func (t sliceTypeName) Kind() TypeKind          { return KindSlice }
+func (t sliceTypeName) Symbol() *Symbol         { return nil }
+func (t sliceTypeName) Elem() TypeName          { return t.elem }
+func (t sliceTypeName) Key() TypeName           { return nil }
+func (t sliceTypeName) Len() int64              { return -1 }
+func (t sliceTypeName) Dir() reflect.ChanDir    { return 0 }
 func (t sliceTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
-func (t sliceTypeName) Signature() *Signature { return nil }
-func (t sliceTypeName) Fields() []FieldType { return nil }
-func (t sliceTypeName) Methods() []MethodType { return nil }
-func (t sliceTypeName) Embeds() []TypeName { return nil }
-func (t sliceTypeName) String() string { return typeNameToString(t) }
+func (t sliceTypeName) Signature() *Signature   { return nil }
+func (t sliceTypeName) Fields() []FieldType     { return nil }
+func (t sliceTypeName) Methods() []MethodType   { return nil }
+func (t sliceTypeName) Embeds() []TypeName      { return nil }
+func (t sliceTypeName) String() string          { return typeNameToString(t) }
 
 type arrayTypeName struct {
 	elem   TypeName
@@ -217,18 +217,18 @@ type arrayTypeName struct {
 
 var _ TypeName = arrayTypeName{}
 
-func (t arrayTypeName) Kind() TypeKind { return KindArray }
-func (t arrayTypeName) Symbol() *Symbol { return nil }
-func (t arrayTypeName) Elem() TypeName { return t.elem }
-func (t arrayTypeName) Key() TypeName { return nil }
-func (t arrayTypeName) Len() int64 { return t.length }
-func (t arrayTypeName) Dir() reflect.ChanDir { return 0 }
+func (t arrayTypeName) Kind() TypeKind          { return KindArray }
+func (t arrayTypeName) Symbol() *Symbol         { return nil }
+func (t arrayTypeName) Elem() TypeName          { return t.elem }
+func (t arrayTypeName) Key() TypeName           { return nil }
+func (t arrayTypeName) Len() int64              { return t.length }
+func (t arrayTypeName) Dir() reflect.ChanDir    { return 0 }
 func (t arrayTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
-func (t arrayTypeName) Signature() *Signature { return nil }
-func (t arrayTypeName) Fields() []FieldType { return nil }
-func (t arrayTypeName) Methods() []MethodType { return nil }
-func (t arrayTypeName) Embeds() []TypeName { return nil }
-func (t arrayTypeName) String() string { return typeNameToString(t) }
+func (t arrayTypeName) Signature() *Signature   { return nil }
+func (t arrayTypeName) Fields() []FieldType     { return nil }
+func (t arrayTypeName) Methods() []MethodType   { return nil }
+func (t arrayTypeName) Embeds() []TypeName      { return nil }
+func (t arrayTypeName) String() string          { return typeNameToString(t) }
 
 type mapTypeName struct {
 	elem, key TypeName
@@ -236,18 +236,18 @@ type mapTypeName struct {
 
 var _ TypeName = mapTypeName{}
 
-func (t mapTypeName) Kind() TypeKind { return KindMap }
-func (t mapTypeName) Symbol() *Symbol { return nil }
-func (t mapTypeName) Elem() TypeName { return t.elem }
-func (t mapTypeName) Key() TypeName { return t.key }
-func (t mapTypeName) Len() int64 { return -1 }
-func (t mapTypeName) Dir() reflect.ChanDir { return 0 }
+func (t mapTypeName) Kind() TypeKind          { return KindMap }
+func (t mapTypeName) Symbol() *Symbol         { return nil }
+func (t mapTypeName) Elem() TypeName          { return t.elem }
+func (t mapTypeName) Key() TypeName           { return t.key }
+func (t mapTypeName) Len() int64              { return -1 }
+func (t mapTypeName) Dir() reflect.ChanDir    { return 0 }
 func (t mapTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
-func (t mapTypeName) Signature() *Signature { return nil }
-func (t mapTypeName) Fields() []FieldType { return nil }
-func (t mapTypeName) Methods() []MethodType { return nil }
-func (t mapTypeName) Embeds() []TypeName { return nil }
-func (t mapTypeName) String() string { return typeNameToString(t) }
+func (t mapTypeName) Signature() *Signature   { return nil }
+func (t mapTypeName) Fields() []FieldType     { return nil }
+func (t mapTypeName) Methods() []MethodType   { return nil }
+func (t mapTypeName) Embeds() []TypeName      { return nil }
+func (t mapTypeName) String() string          { return typeNameToString(t) }
 
 type chanTypeName struct {
 	elem TypeName
@@ -256,52 +256,52 @@ type chanTypeName struct {
 
 var _ TypeName = chanTypeName{}
 
-func (t chanTypeName) Kind() TypeKind { return KindChan }
-func (t chanTypeName) Symbol() *Symbol { return nil }
-func (t chanTypeName) Elem() TypeName { return t.elem }
-func (t chanTypeName) Key() TypeName { return nil }
-func (t chanTypeName) Len() int64 { return -1 }
-func (t chanTypeName) Dir() reflect.ChanDir { return t.dir }
+func (t chanTypeName) Kind() TypeKind          { return KindChan }
+func (t chanTypeName) Symbol() *Symbol         { return nil }
+func (t chanTypeName) Elem() TypeName          { return t.elem }
+func (t chanTypeName) Key() TypeName           { return nil }
+func (t chanTypeName) Len() int64              { return -1 }
+func (t chanTypeName) Dir() reflect.ChanDir    { return t.dir }
 func (t chanTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
-func (t chanTypeName) Signature() *Signature { return nil }
-func (t chanTypeName) Fields() []FieldType { return nil }
-func (t chanTypeName) Methods() []MethodType { return nil }
-func (t chanTypeName) Embeds() []TypeName { return nil }
-func (t chanTypeName) String() string { return typeNameToString(t) }
+func (t chanTypeName) Signature() *Signature   { return nil }
+func (t chanTypeName) Fields() []FieldType     { return nil }
+func (t chanTypeName) Methods() []MethodType   { return nil }
+func (t chanTypeName) Embeds() []TypeName      { return nil }
+func (t chanTypeName) String() string          { return typeNameToString(t) }
 
 type funcTypeName Signature
 
 var _ TypeName = &funcTypeName{}
 
-func (t *funcTypeName) Kind() TypeKind { return KindFunc }
-func (t *funcTypeName) Symbol() *Symbol { return nil }
-func (t *funcTypeName) Elem() TypeName { return nil }
-func (t *funcTypeName) Key() TypeName { return nil }
-func (t *funcTypeName) Len() int64 { return -1 }
-func (t *funcTypeName) Dir() reflect.ChanDir { return 0 }
+func (t *funcTypeName) Kind() TypeKind          { return KindFunc }
+func (t *funcTypeName) Symbol() *Symbol         { return nil }
+func (t *funcTypeName) Elem() TypeName          { return nil }
+func (t *funcTypeName) Key() TypeName           { return nil }
+func (t *funcTypeName) Len() int64              { return -1 }
+func (t *funcTypeName) Dir() reflect.ChanDir    { return 0 }
 func (t *funcTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
-func (t *funcTypeName) Signature() *Signature { return (*Signature)(t) }
-func (t *funcTypeName) Fields() []FieldType { return nil }
-func (t *funcTypeName) Methods() []MethodType { return nil }
-func (t *funcTypeName) Embeds() []TypeName { return nil }
-func (t *funcTypeName) String() string { return typeNameToString(t) }
+func (t *funcTypeName) Signature() *Signature   { return (*Signature)(t) }
+func (t *funcTypeName) Fields() []FieldType     { return nil }
+func (t *funcTypeName) Methods() []MethodType   { return nil }
+func (t *funcTypeName) Embeds() []TypeName      { return nil }
+func (t *funcTypeName) String() string          { return typeNameToString(t) }
 
 type structTypeName []FieldType
 
 var _ TypeName = structTypeName{}
 
-func (t structTypeName) Kind() TypeKind { return KindStruct }
-func (t structTypeName) Symbol() *Symbol { return nil }
-func (t structTypeName) Elem() TypeName { return nil }
-func (t structTypeName) Key() TypeName { return nil }
-func (t structTypeName) Len() int64 { return -1 }
-func (t structTypeName) Dir() reflect.ChanDir { return 0 }
+func (t structTypeName) Kind() TypeKind          { return KindStruct }
+func (t structTypeName) Symbol() *Symbol         { return nil }
+func (t structTypeName) Elem() TypeName          { return nil }
+func (t structTypeName) Key() TypeName           { return nil }
+func (t structTypeName) Len() int64              { return -1 }
+func (t structTypeName) Dir() reflect.ChanDir    { return 0 }
 func (t structTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
-func (t structTypeName) Signature() *Signature { return nil }
-func (t structTypeName) Fields() []FieldType { return append([]FieldType{}, t...) }
-func (t structTypeName) Methods() []MethodType { return nil }
-func (t structTypeName) Embeds() []TypeName { return nil }
-func (t structTypeName) String() string { return typeNameToString(t) }
+func (t structTypeName) Signature() *Signature   { return nil }
+func (t structTypeName) Fields() []FieldType     { return append([]FieldType{}, t...) }
+func (t structTypeName) Methods() []MethodType   { return nil }
+func (t structTypeName) Embeds() []TypeName      { return nil }
+func (t structTypeName) String() string          { return typeNameToString(t) }
 
 type interfaceTypeName struct {
 	methods []MethodType
@@ -310,39 +310,39 @@ type interfaceTypeName struct {
 
 var _ TypeName = interfaceTypeName{}
 
-func (t interfaceTypeName) Kind() TypeKind { return KindStruct }
-func (t interfaceTypeName) Symbol() *Symbol { return nil }
-func (t interfaceTypeName) Elem() TypeName { return nil }
-func (t interfaceTypeName) Key() TypeName { return nil }
-func (t interfaceTypeName) Len() int64 { return -1 }
-func (t interfaceTypeName) Dir() reflect.ChanDir { return 0 }
+func (t interfaceTypeName) Kind() TypeKind          { return KindStruct }
+func (t interfaceTypeName) Symbol() *Symbol         { return nil }
+func (t interfaceTypeName) Elem() TypeName          { return nil }
+func (t interfaceTypeName) Key() TypeName           { return nil }
+func (t interfaceTypeName) Len() int64              { return -1 }
+func (t interfaceTypeName) Dir() reflect.ChanDir    { return 0 }
 func (t interfaceTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
-func (t interfaceTypeName) Signature() *Signature { return nil }
-func (t interfaceTypeName) Fields() []FieldType { return nil }
-func (t interfaceTypeName) Methods() []MethodType { return append([]MethodType{}, t.methods...) }
-func (t interfaceTypeName) Embeds() []TypeName { return append([]TypeName{}, t.embeds...) }
-func (t interfaceTypeName) String() string { return typeNameToString(t) }
+func (t interfaceTypeName) Signature() *Signature   { return nil }
+func (t interfaceTypeName) Fields() []FieldType     { return nil }
+func (t interfaceTypeName) Methods() []MethodType   { return append([]MethodType{}, t.methods...) }
+func (t interfaceTypeName) Embeds() []TypeName      { return append([]TypeName{}, t.embeds...) }
+func (t interfaceTypeName) String() string          { return typeNameToString(t) }
 
 var (
 	basicTypes = map[reflect.Kind]struct{}{
-		reflect.Bool: {},
-		reflect.String: {},
-		reflect.Int: {},
-		reflect.Int8: {},
-		reflect.Int16: {},
-		reflect.Int32: {},
-		reflect.Int64: {},
-		reflect.Uint: {},
-		reflect.Uint8: {},
-		reflect.Uint16: {},
-		reflect.Uint32: {},
-		reflect.Uint64: {},
-		reflect.Uintptr: {},
+		reflect.Bool:          {},
+		reflect.String:        {},
+		reflect.Int:           {},
+		reflect.Int8:          {},
+		reflect.Int16:         {},
+		reflect.Int32:         {},
+		reflect.Int64:         {},
+		reflect.Uint:          {},
+		reflect.Uint8:         {},
+		reflect.Uint16:        {},
+		reflect.Uint32:        {},
+		reflect.Uint64:        {},
+		reflect.Uintptr:       {},
 		reflect.UnsafePointer: {},
-		reflect.Float32: {},
-		reflect.Float64: {},
-		reflect.Complex64: {},
-		reflect.Complex128: {},
+		reflect.Float32:       {},
+		reflect.Float64:       {},
+		reflect.Complex64:     {},
+		reflect.Complex128:    {},
 	}
 )
 
@@ -617,7 +617,7 @@ func ChannelType(t TypeName, dir reflect.ChanDir) TypeName {
 	if dir == 0 {
 		dir = reflect.BothDir
 	}
-	if t == nil || dir &^ reflect.BothDir != 0 {
+	if t == nil || dir&^reflect.BothDir != 0 {
 		panic("cannot create a channel type with nil element type or invalid direction")
 	}
 	return chanTypeName{elem: t, dir: dir}
