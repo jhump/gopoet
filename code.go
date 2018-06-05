@@ -1,8 +1,12 @@
 package gopoet
 
+import (
+	"bytes"
+	"fmt"
+)
+
 type CodeBlock struct {
 	lines      []line
-	currIndent int
 }
 
 func (cb *CodeBlock) Print(text string) *CodeBlock {
@@ -14,7 +18,7 @@ func (cb *CodeBlock) Println(text string) *CodeBlock {
 }
 
 func (cb *CodeBlock) Printf(fmt string, args ...interface{}) *CodeBlock {
-	cb.lines = append(cb.lines, line{indent: cb.currIndent, format: fmt, args: args})
+	cb.lines = append(cb.lines, line{format: fmt, args: args})
 	return cb
 }
 
@@ -38,21 +42,64 @@ func Printlnf(fmt string, args ...interface{}) *CodeBlock {
 	return (&CodeBlock{}).Printlnf(fmt, args)
 }
 
-func (cb *CodeBlock) Indent() *CodeBlock {
-	cb.currIndent++
-	return cb
+func (cb *CodeBlock) qualify(imports *Imports) {
+	for _, l := range cb.lines {
+		for i := range l.args {
+			switch a := l.args[i].(type) {
+			case Package:
+				p := imports.RegisterImportForPackage(a)
+				if p != a.Name {
+					l.args[i] = Package{Name: p, ImportPath: a.ImportPath}
+				}
+			case *Package:
+				p := imports.RegisterImportForPackage(*a)
+				if p != a.Name {
+					l.args[i] = Package{Name: p, ImportPath: a.ImportPath}
+				}
+			case Symbol:
+				l.args[i] = imports.EnsureImported(&a)
+			case *Symbol:
+				l.args[i] = imports.EnsureImported(a)
+			case MethodReference:
+				sym := imports.EnsureImported(a.Type)
+				if sym != a.Type {
+					l.args[i] = &MethodReference{Type: sym, Method: a.Method}
+				}
+			case *MethodReference:
+				sym := imports.EnsureImported(a.Type)
+				if sym != a.Type {
+					l.args[i] = &MethodReference{Type: sym, Method: a.Method}
+				}
+			case Signature:
+				l.args[i] = imports.EnsureAllTypesImported(&a)
+			case *Signature:
+				l.args[i] = imports.EnsureAllTypesImported(a)
+			case TypeName:
+				l.args[i] = imports.EnsureTypeImported(a)
+			case interface{ToSymbol() *Symbol}:
+				l.args[i] = imports.EnsureImported(a.ToSymbol())
+			case interface{ToMethodReference() *MethodReference}:
+				mr := a.ToMethodReference()
+				sym := imports.EnsureImported(mr.Type)
+				l.args[i] = &MethodReference{Type: sym, Method: mr.Method}
+			}
+		}
+	}
 }
 
-func (cb *CodeBlock) Unindent() *CodeBlock {
-	if cb.currIndent == 0 {
-		panic("cannot unindent: current indent level is zero")
+func (cb *CodeBlock) writeTo(b *bytes.Buffer) {
+	for _, line := range cb.lines {
+		fmt.Fprintf(b, line.format, line.args...)
 	}
-	cb.currIndent--
-	return cb
+}
+
+func writeIndent(b *bytes.Buffer, indent int) {
+	for i := 0; i < indent; i++ {
+		b.WriteRune('\t')
+	}
 }
 
 type line struct {
-	indent int
 	format string
 	args   []interface{}
 }

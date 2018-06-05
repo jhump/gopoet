@@ -181,7 +181,7 @@ func (i *Imports) qualifyType(n TypeName, registerIfNotFound bool) TypeName {
 		}
 	case KindInterface:
 		embeds := n.Embeds()
-		nembeds := i.qualifyTypes(embeds, registerIfNotFound)
+		nembeds := i.qualifySymbols(embeds, registerIfNotFound)
 		methods := n.Methods()
 		nmethods := i.qualifyMethods(methods, registerIfNotFound)
 		if !sameSlice(nembeds, embeds) || !sameSlice(nmethods, methods) {
@@ -194,7 +194,7 @@ func (i *Imports) qualifyType(n TypeName, registerIfNotFound bool) TypeName {
 // EnsureTypeImported ensures that any symbols referenced by the given type are
 // imported and returns a new type with correct package prefixes. See
 // EnsureImported for more details.
-func (i *Imports) EnsureAllTypeImported(s *Signature) *Signature {
+func (i *Imports) EnsureAllTypesImported(s *Signature) *Signature {
 	return i.qualifySignature(s, true)
 }
 
@@ -215,6 +215,24 @@ func sameSlice(s1 interface{}, s2 interface{}) bool {
 	r1 := reflect.ValueOf(s1)
 	r2 := reflect.ValueOf(s2)
 	return r1.Pointer() == r2.Pointer() && r1.Len() == r2.Len()
+}
+
+func (i *Imports) qualifySymbols(syms []*Symbol, registerIfNotFound bool) []*Symbol {
+	var ret []*Symbol
+	for idx, s := range syms {
+		nt := i.qualify(s, registerIfNotFound)
+		if nt != s {
+			if ret == nil {
+				ret = make([]*Symbol, len(syms))
+				copy(ret, syms)
+			}
+			ret[idx] = nt
+		}
+	}
+	if ret == nil {
+		return syms
+	}
+	return ret
 }
 
 func (i *Imports) qualifyTypes(types []TypeName, registerIfNotFound bool) []TypeName {
