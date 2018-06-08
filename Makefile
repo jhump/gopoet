@@ -1,5 +1,5 @@
 .PHONY: default
-default: deps checkgofmt vet predeclared staticcheck unused ineffassign golint errcheck test
+default: deps checkgofmt vet predeclared staticcheck unused ineffassign golint test
 
 .PHONY: deps
 deps:
