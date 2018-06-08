@@ -43,7 +43,7 @@
 // references to elements or types in other packages are interpolated into Go
 // source code with the correct qualifiers.
 //
-// Packages, Symbols, and Method References
+// Packages and Symbols
 //
 // The lowest level building blocks for the above API are representations of
 // packages, symbols (references to named package-level elements, like consts,
