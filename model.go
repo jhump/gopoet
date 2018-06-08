@@ -370,7 +370,9 @@ func writeComment(comment string, w *bytes.Buffer) {
 }
 
 // FileElement is a top-level element in a Go source file. It will be a const,
-// var, type, or func declaration.
+// var, type, or func declaration. The concrete types that implement this
+// interface are *gopoet.ConstDecl, *gopoet.VarDecl, *gopoet.TypeDecl, and
+// *gopoet.FuncSpec.
 type FileElement interface {
 	isFileElement()
 	writeTo(b *bytes.Buffer)
@@ -378,8 +380,8 @@ type FileElement interface {
 	qualify(imports *Imports)
 }
 
-// ConstDecl is a declaration which may contain one or more consts. When it has
-// exactly one const, it is rendered like so:
+// ConstDecl is a FileElement representing a declaration of one or more consts.
+// When it has exactly one const, it is rendered like so:
 //
 //    const name Type = initialValue
 //
@@ -611,8 +613,8 @@ func (c *ConstSpec) writeTo(b *bytes.Buffer) {
 	b.WriteRune('\n')
 }
 
-// VarDecl is a declaration which may contain one or more vars. When it has
-// exactly one var, it is rendered like so:
+// VarDecl is a FileElement representing a declaration of one or more vars. When
+// it has exactly one var, it is rendered like so:
 //
 //    var name Type = initialValue
 //
@@ -814,8 +816,8 @@ func (v *VarSpec) writeTo(b *bytes.Buffer) {
 	b.WriteRune('\n')
 }
 
-// TypeDecl is a declaration which may contain one or more types. When it has
-// exactly one type, it is rendered like so:
+// TypeDecl is a FileElement representing a declaration of one or more types.
+// When it has exactly one type, it is rendered like so:
 //
 //    type Name underlyingType
 //
@@ -1377,12 +1379,12 @@ func (m *InterfaceMethod) qualify(imports *Imports) {
 	}
 }
 
-// FuncSpec describes a func or method definition. The Name field is not
-// optional. If the function has one or more result values in its signature,
-// the code block body should not be empty (or the result will be Go code that
-// doesn't compile).
+// FuncSpec is a FileElement representing a func or method definition. The Name
+// field is not optional. If the function has one or more result values in its
+// signature, the code block body should not be empty (or the result will be Go
+// code that doesn't compile).
 //
-// If the FuncSpec  has a receiver, then it is a method instead of an ordinary
+// If the FuncSpec has a receiver, then it is a method instead of an ordinary
 // function.
 type FuncSpec struct {
 	Comment, Name string
