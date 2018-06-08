@@ -5,6 +5,7 @@ import (
 	"path"
 	"reflect"
 	"sort"
+	"strconv"
 )
 
 // Imports accumulate a set of package imports, used for generating a Go source
@@ -100,11 +101,17 @@ func (i *Imports) EnsureImported(sym *Symbol) *Symbol {
 	return i.qualify(sym, true)
 }
 
+// Qualify returns a new symbol that has the correct package prefix, based on
+// how the given symbol's package was imported/aliased. This method panics if
+// symbol's package was never registered.
 func (i *Imports) Qualify(sym *Symbol) *Symbol {
 	return i.qualify(sym, false)
 }
 
 func (i *Imports) qualify(sym *Symbol, registerIfNotFound bool) *Symbol {
+	if sym.Package.Name == "" && sym.Package.ImportPath == "" {
+		return sym
+	}
 	name := i.prefixForPackage(sym.Package.ImportPath, sym.Package.Name, registerIfNotFound)
 	if len(name) > 0 && name[len(name)-1] == '.' {
 		name = name[:len(name)-1]
@@ -123,6 +130,9 @@ func (i *Imports) EnsureTypeImported(n TypeName) TypeName {
 	return i.qualifyType(n, true)
 }
 
+// QualifyType returns a new type with correct package prefixes, based on how
+// referenced type elements were actually imported/aliased. This method panics
+// if any of the referenced packages were never registered.
 func (i *Imports) QualifyType(n TypeName) TypeName {
 	return i.qualifyType(n, false)
 }
@@ -191,13 +201,16 @@ func (i *Imports) qualifyType(n TypeName, registerIfNotFound bool) TypeName {
 	return n
 }
 
-// EnsureTypeImported ensures that any symbols referenced by the given type are
-// imported and returns a new type with correct package prefixes. See
-// EnsureImported for more details.
+// EnsureAllTypesImported ensures that all argument and result value types in
+// the given signature are imported and returns a new signature where all types
+// contain the correct package prefixes. See EnsureTypeImported for more details.
 func (i *Imports) EnsureAllTypesImported(s *Signature) *Signature {
 	return i.qualifySignature(s, true)
 }
 
+// QualifySignature returns a new signature where all types contain the correct
+// package prefixes, based on how the referenced packages were imported/aliased.
+// This method panics if any of the referenced packages were never registered.
 func (i *Imports) QualifySignature(s *Signature) *Signature {
 	return i.qualifySignature(s, false)
 }
@@ -307,6 +320,27 @@ func (i *Imports) qualifyMethods(methods []MethodType, registerIfNotFound bool) 
 	return ret
 }
 
+// QualifyTemplateData will re-create the given template data value so that any
+// references to packages (including elements/fields/etc whose type is
+// gopoet.Package, gopoet.TypeName, gopoet.Signature, or any of the various
+// gopoet.FileElement concrete types) indicate the correct package prefixes
+// based on how the packages were actually imported/aliased.
+//
+// If any references are found to packages that have not been imported, they are
+// added to the imports (e.g. i.RegisterImportForPackage) and the resulting
+// package name or alias is used to re-create the reference.
+func (i *Imports) QualifyTemplateData(data interface{}) interface{} {
+	if data == nil {
+		return nil
+	}
+	// we want to make sure the entry point value has a type of interface{}
+	// (not data's concrete type) so we know we can safely re-write it if it
+	// implements TypeName
+	rv := reflect.ValueOf([]interface{}{data}).Index(0)
+	newData, _ := qualifyTemplateData(i, rv)
+	return newData.Interface()
+}
+
 // ImportSpecs returns the list of imports that have been accumulated so far,
 // sorted lexically by import path.
 func (i *Imports) ImportSpecs() []ImportSpec {
@@ -330,4 +364,20 @@ func (i *Imports) ImportSpecs() []ImportSpec {
 type ImportSpec struct {
 	PackageAlias string
 	ImportPath   string
+}
+
+// String returns a string representation of the import. It will be the import
+// path in double-quotes. Optionally, if the package alias is not empty, it will
+// have a prefix that indicates the alias. For example:
+//
+//    "some.domain.com/foo/bar"
+//    bar2 "some.domain.com/foo/bar"
+//
+// The first line shows the string representation without an alias, the second
+// line with.
+func (i ImportSpec) String() string {
+	if i.PackageAlias == "" {
+		return strconv.Quote(i.ImportPath)
+	}
+	return i.PackageAlias + " " + strconv.Quote(i.ImportPath)
 }

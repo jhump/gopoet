@@ -3,7 +3,6 @@ package gopoet
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"reflect"
 	"strconv"
 
@@ -14,39 +13,46 @@ import (
 type TypeKind int
 
 const (
+	// KindInvalid is not a valid kind. A valid TypeName will return a non-zero
+	// kind.
 	KindInvalid TypeKind = iota
-	// The type is a named type. The only information available in the TypeName
-	// is the package and name of the type, not its underlying type. The type's
-	// Symbol() method can be used to get the details of the name.
+	// KindNamed indicates a named type. The only information available in the
+	// TypeName is the package and name of the type, not its underlying type.
+	// The type's Symbol() method can be used to get the details of the name.
 	KindNamed
-	// The type is an unnamed basic type (i.e. primitive). The type's
+	// KindBasic indicates an unnamed basic type (i.e. primitive). The type's
 	// BasicKind() method can be used to determine which basic type it is.
+	//
+	// Note that though the "go/types" package considers an unsafe.Pointer to be
+	// a basic type, this package does not. An unsafe.Pointer will instead be
+	// represented by a TypeName that is a named type whose symbol indicates
+	// "unsafe" as the package and "Pointer" as the element name.
 	KindBasic
-	// The type is a pointer. The type's Elem() method can be used to determine
-	// the type to which it points.
+	// KindPtr indicates is a pointer. The type's Elem() method can be used to
+	// determine the type to which it points.
 	KindPtr
-	// The type is a slice. The type's Elem() method can be used to determine
-	// the slice's element type.
+	// KindSlice indicates a slice. The type's Elem() method can be used to
+	// determine the slice's element type.
 	KindSlice
-	// The type is an array. The type's Elem() and Size() methods can be used to
-	// determine array's element type and length, respectively.
+	// KindArray indicates an array. The type's Elem() and Len() methods can be
+	// used to determine array's element type and length, respectively.
 	KindArray
-	// The type is a map. The type's Key() and Elem() methods can be used to
-	// determine the map's key and value types, respectively.
+	// KindMap indicates a map. The type's Key() and Elem() methods can be used
+	// to determine the map's key and value types, respectively.
 	KindMap
-	// The type is a chan. The type's Elem() and Dir() methods can be used to
-	// determine the element type and channel direction, respectively.
+	// KindChan indicates a chan. The type's Elem() and Dir() methods can be
+	// used to determine the element type and channel direction, respectively.
 	KindChan
-	// The type is a func. The type's Args() and Results() methods can be used
-	// to determine the number of types of the function's arguments and results,
-	// respectively.
+	// KindFunc indicates a func. The type's Signature() method can be used to
+	// inspect the function's signature, including argument and result types.
 	KindFunc
-	// The type is a struct type. The type's Fields() methods can be used to
-	// interrogate details about the struct. This kind is only returned for
-	// type names that represent unnamed struct types.
+	// KindStruct indicates a struct type. The type's Fields() method can be
+	// used to interrogate details about the struct. This kind is only returned
+	// for type names that represent unnamed struct types.
 	KindStruct
-	// The type is an interface type. The type's Methods() methods can be used to
-	// interrogate details about the interface. This kind is only returned for
+	// KindInterface indicates an interface type. The type's Methods() and
+	// Embeds() methods can be used to determine the explicit methods and
+	// the embedded interfaces, respectively. This kind is only returned for
 	// type names that represent unnamed interface types.
 	KindInterface
 )
@@ -88,16 +94,15 @@ type TypeName interface {
 	// of KindNamed and nil from this method; only unnamed struct types will
 	// contain field information.
 	Fields() []FieldType
-	// Methods returns the methods of this interface type or nil if this type
-	// name does not represent an interface type. Named interface types will
-	// return a kind of KindNamed and nil from this method; only unnamed
-	// interface types will contain method information.
+	// Methods returns the explicit methods of this interface type or nil if
+	// this type name does not represent an interface type. Named interface
+	// types will return a kind of KindNamed and nil from this method; only
+	// unnamed interface types will contain method information.
 	Methods() []MethodType
-	// Embeds returns the interfaces that this interface type embeds or nil if
-	// this type name does not represent an interface type. All of the returned
-	// type names will themselves be named types (e.g. Kind() == KindNamed).
-	// Named interface types will return a kind of KindNamed and nil from this
-	// method; only unnamed interface types will contain embedded interface
+	// Embeds returns the symbols for the named interfaces that this interface
+	// type embeds or nil if this type name does not represent an interface
+	// type. Named interface types will return a kind of KindNamed and nil from
+	// this method; only unnamed interface types will contain embedded interface
 	// information.
 	Embeds() []*Symbol
 
@@ -106,38 +111,64 @@ type TypeName interface {
 	isTypeNameOrSpec()
 }
 
+// Signature represents a function signature, which includes the types of the
+// arguments and return values. If the last argument is a slice, the function
+// might also be variadic or not.
+//
+// Signatures do not carry receiver information for methods. In the case of
+// MethodType instances, the receiver is implied by the enclosing TypeName. For
+// FuncSpec instances, the receiver is a separate field of the FuncSpec,
+// distinct from the signature.
 type Signature struct {
 	Args       []ArgType
 	Results    []ArgType
 	IsVariadic bool
 }
 
+// AddArg adds an argument to the signature. The given name can be blank for
+// signatures with unnamed arguments. If the signature has a mix of named and
+// unnamed args, they will all be rendered as named, but "_" will be used for
+// unnamed ones. This method returns the signature, for method chaining.
 func (s *Signature) AddArg(name string, t TypeName) *Signature {
 	s.Args = append(s.Args, ArgType{Name: name, Type: t})
 	return s
 }
 
+// AddResult adds a result value to the signature. The given name can be blank
+// for signatures with unnamed results. If the signature has a mix of named and
+// unnamed results, they will all be rendered as named, but "_" will be used for
+// unnamed ones. This method returns the signature, for method chaining.
 func (s *Signature) AddResult(name string, t TypeName) *Signature {
 	s.Results = append(s.Results, ArgType{Name: name, Type: t})
 	return s
 }
 
+// SetVariadic sets whether this signature represents a variadic function or
+// not. The resulting signature will be invalid if variadic is set to true but
+// the last argument is not a slice. This method returns the signature, for
+// method chaining.
 func (s *Signature) SetVariadic(isVariadic bool) *Signature {
 	s.IsVariadic = isVariadic
 	return s
 }
 
+// ArgType represents the name and type of a function argument or result value.
+// The name is optional, but the type is not. See Signature.
 type ArgType struct {
 	Name string
 	Type TypeName
 }
 
+// FieldType represents a field in a TypeName whose kind is KindStruct. It
+// details the field's name and type as well as an optional struct tag.
 type FieldType struct {
 	Name string
 	Type TypeName
 	Tag  reflect.StructTag
 }
 
+// MethodType represents a method in a TypeName whose kind is KindInterface. It
+// details the method's name and signature.
 type MethodType struct {
 	Name      string
 	Signature Signature
@@ -157,7 +188,7 @@ func (t basicTypeName) BasicKind() reflect.Kind { return reflect.Kind(t) }
 func (t basicTypeName) Signature() *Signature   { return nil }
 func (t basicTypeName) Fields() []FieldType     { return nil }
 func (t basicTypeName) Methods() []MethodType   { return nil }
-func (t basicTypeName) Embeds() []*Symbol      { return nil }
+func (t basicTypeName) Embeds() []*Symbol       { return nil }
 func (t basicTypeName) String() string          { return typeNameToString(t) }
 func (t basicTypeName) isTypeNameOrSpec()       {}
 
@@ -175,7 +206,7 @@ func (t *namedTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
 func (t *namedTypeName) Signature() *Signature   { return nil }
 func (t *namedTypeName) Fields() []FieldType     { return nil }
 func (t *namedTypeName) Methods() []MethodType   { return nil }
-func (t *namedTypeName) Embeds() []*Symbol      { return nil }
+func (t *namedTypeName) Embeds() []*Symbol       { return nil }
 func (t *namedTypeName) String() string          { return typeNameToString(t) }
 func (t *namedTypeName) isTypeNameOrSpec()       {}
 
@@ -195,7 +226,7 @@ func (t ptrTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
 func (t ptrTypeName) Signature() *Signature   { return nil }
 func (t ptrTypeName) Fields() []FieldType     { return nil }
 func (t ptrTypeName) Methods() []MethodType   { return nil }
-func (t ptrTypeName) Embeds() []*Symbol      { return nil }
+func (t ptrTypeName) Embeds() []*Symbol       { return nil }
 func (t ptrTypeName) String() string          { return typeNameToString(t) }
 func (t ptrTypeName) isTypeNameOrSpec()       {}
 
@@ -215,7 +246,7 @@ func (t sliceTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
 func (t sliceTypeName) Signature() *Signature   { return nil }
 func (t sliceTypeName) Fields() []FieldType     { return nil }
 func (t sliceTypeName) Methods() []MethodType   { return nil }
-func (t sliceTypeName) Embeds() []*Symbol      { return nil }
+func (t sliceTypeName) Embeds() []*Symbol       { return nil }
 func (t sliceTypeName) String() string          { return typeNameToString(t) }
 func (t sliceTypeName) isTypeNameOrSpec()       {}
 
@@ -236,7 +267,7 @@ func (t arrayTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
 func (t arrayTypeName) Signature() *Signature   { return nil }
 func (t arrayTypeName) Fields() []FieldType     { return nil }
 func (t arrayTypeName) Methods() []MethodType   { return nil }
-func (t arrayTypeName) Embeds() []*Symbol      { return nil }
+func (t arrayTypeName) Embeds() []*Symbol       { return nil }
 func (t arrayTypeName) String() string          { return typeNameToString(t) }
 func (t arrayTypeName) isTypeNameOrSpec()       {}
 
@@ -256,7 +287,7 @@ func (t mapTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
 func (t mapTypeName) Signature() *Signature   { return nil }
 func (t mapTypeName) Fields() []FieldType     { return nil }
 func (t mapTypeName) Methods() []MethodType   { return nil }
-func (t mapTypeName) Embeds() []*Symbol      { return nil }
+func (t mapTypeName) Embeds() []*Symbol       { return nil }
 func (t mapTypeName) String() string          { return typeNameToString(t) }
 func (t mapTypeName) isTypeNameOrSpec()       {}
 
@@ -277,7 +308,7 @@ func (t chanTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
 func (t chanTypeName) Signature() *Signature   { return nil }
 func (t chanTypeName) Fields() []FieldType     { return nil }
 func (t chanTypeName) Methods() []MethodType   { return nil }
-func (t chanTypeName) Embeds() []*Symbol      { return nil }
+func (t chanTypeName) Embeds() []*Symbol       { return nil }
 func (t chanTypeName) String() string          { return typeNameToString(t) }
 func (t chanTypeName) isTypeNameOrSpec()       {}
 
@@ -295,72 +326,74 @@ func (t *funcTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
 func (t *funcTypeName) Signature() *Signature   { return (*Signature)(t) }
 func (t *funcTypeName) Fields() []FieldType     { return nil }
 func (t *funcTypeName) Methods() []MethodType   { return nil }
-func (t *funcTypeName) Embeds() []*Symbol      { return nil }
+func (t *funcTypeName) Embeds() []*Symbol       { return nil }
 func (t *funcTypeName) String() string          { return typeNameToString(t) }
 func (t *funcTypeName) isTypeNameOrSpec()       {}
 
-type structTypeName []FieldType
+type structTypeName struct {
+	fields []FieldType
+}
 
-var _ TypeName = structTypeName{}
+var _ TypeName = &structTypeName{}
 
-func (t structTypeName) Kind() TypeKind          { return KindStruct }
-func (t structTypeName) Symbol() *Symbol         { return nil }
-func (t structTypeName) Elem() TypeName          { return nil }
-func (t structTypeName) Key() TypeName           { return nil }
-func (t structTypeName) Len() int64              { return -1 }
-func (t structTypeName) Dir() reflect.ChanDir    { return 0 }
-func (t structTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
-func (t structTypeName) Signature() *Signature   { return nil }
-func (t structTypeName) Fields() []FieldType     { return append([]FieldType{}, t...) }
-func (t structTypeName) Methods() []MethodType   { return nil }
-func (t structTypeName) Embeds() []*Symbol      { return nil }
-func (t structTypeName) String() string          { return typeNameToString(t) }
-func (t structTypeName) isTypeNameOrSpec()       {}
+func (t *structTypeName) Kind() TypeKind          { return KindStruct }
+func (t *structTypeName) Symbol() *Symbol         { return nil }
+func (t *structTypeName) Elem() TypeName          { return nil }
+func (t *structTypeName) Key() TypeName           { return nil }
+func (t *structTypeName) Len() int64              { return -1 }
+func (t *structTypeName) Dir() reflect.ChanDir    { return 0 }
+func (t *structTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
+func (t *structTypeName) Signature() *Signature   { return nil }
+func (t *structTypeName) Fields() []FieldType     { return append([]FieldType{}, t.fields...) }
+func (t *structTypeName) Methods() []MethodType   { return nil }
+func (t *structTypeName) Embeds() []*Symbol       { return nil }
+func (t *structTypeName) String() string          { return typeNameToString(t) }
+func (t *structTypeName) isTypeNameOrSpec()       {}
 
 type interfaceTypeName struct {
 	methods []MethodType
 	embeds  []*Symbol
 }
 
-var _ TypeName = interfaceTypeName{}
+var _ TypeName = &interfaceTypeName{}
 
-func (t interfaceTypeName) Kind() TypeKind          { return KindStruct }
-func (t interfaceTypeName) Symbol() *Symbol         { return nil }
-func (t interfaceTypeName) Elem() TypeName          { return nil }
-func (t interfaceTypeName) Key() TypeName           { return nil }
-func (t interfaceTypeName) Len() int64              { return -1 }
-func (t interfaceTypeName) Dir() reflect.ChanDir    { return 0 }
-func (t interfaceTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
-func (t interfaceTypeName) Signature() *Signature   { return nil }
-func (t interfaceTypeName) Fields() []FieldType     { return nil }
-func (t interfaceTypeName) Methods() []MethodType   { return append([]MethodType{}, t.methods...) }
-func (t interfaceTypeName) Embeds() []*Symbol      { return append([]*Symbol{}, t.embeds...) }
-func (t interfaceTypeName) String() string          { return typeNameToString(t) }
-func (t interfaceTypeName) isTypeNameOrSpec()       {}
+func (t *interfaceTypeName) Kind() TypeKind          { return KindStruct }
+func (t *interfaceTypeName) Symbol() *Symbol         { return nil }
+func (t *interfaceTypeName) Elem() TypeName          { return nil }
+func (t *interfaceTypeName) Key() TypeName           { return nil }
+func (t *interfaceTypeName) Len() int64              { return -1 }
+func (t *interfaceTypeName) Dir() reflect.ChanDir    { return 0 }
+func (t *interfaceTypeName) BasicKind() reflect.Kind { return reflect.Invalid }
+func (t *interfaceTypeName) Signature() *Signature   { return nil }
+func (t *interfaceTypeName) Fields() []FieldType     { return nil }
+func (t *interfaceTypeName) Methods() []MethodType   { return append([]MethodType{}, t.methods...) }
+func (t *interfaceTypeName) Embeds() []*Symbol       { return append([]*Symbol{}, t.embeds...) }
+func (t *interfaceTypeName) String() string          { return typeNameToString(t) }
+func (t *interfaceTypeName) isTypeNameOrSpec()       {}
 
 var (
 	basicTypes = map[reflect.Kind]struct{}{
-		reflect.Bool:          {},
-		reflect.String:        {},
-		reflect.Int:           {},
-		reflect.Int8:          {},
-		reflect.Int16:         {},
-		reflect.Int32:         {},
-		reflect.Int64:         {},
-		reflect.Uint:          {},
-		reflect.Uint8:         {},
-		reflect.Uint16:        {},
-		reflect.Uint32:        {},
-		reflect.Uint64:        {},
-		reflect.Uintptr:       {},
-		reflect.UnsafePointer: {},
-		reflect.Float32:       {},
-		reflect.Float64:       {},
-		reflect.Complex64:     {},
-		reflect.Complex128:    {},
+		reflect.Bool:       {},
+		reflect.String:     {},
+		reflect.Int:        {},
+		reflect.Int8:       {},
+		reflect.Int16:      {},
+		reflect.Int32:      {},
+		reflect.Int64:      {},
+		reflect.Uint:       {},
+		reflect.Uint8:      {},
+		reflect.Uint16:     {},
+		reflect.Uint32:     {},
+		reflect.Uint64:     {},
+		reflect.Uintptr:    {},
+		reflect.Float32:    {},
+		reflect.Float64:    {},
+		reflect.Complex64:  {},
+		reflect.Complex128: {},
 	}
 )
 
+// TypeNameForGoType converts the given "go/types" type into a TypeName.
 func TypeNameForGoType(t types.Type) TypeName {
 	switch t := t.(type) {
 	case *types.Named:
@@ -408,7 +441,7 @@ func TypeNameForGoType(t types.Type) TypeName {
 		case types.String:
 			k = reflect.String
 		case types.UnsafePointer:
-			k = reflect.UnsafePointer
+			return UnsafePointerType
 		default:
 			bt := types.Typ[t.Kind()]
 			if bt == nil {
@@ -518,6 +551,11 @@ func argsTypesForGoType(t *types.Tuple) []ArgType {
 	return args
 }
 
+// TypeNameForGoType converts the given reflect.Type into a TypeName. Note that
+// reflect.Type instances do not carry information about embedded interfaces,
+// for unnamed interface types. So the resulting TypeName will contain all
+// methods as if they were all explicit, even if some come from embedded
+// interfaces in the type's source definition.
 func TypeNameForReflectType(t reflect.Type) TypeName {
 	if _, ok := basicTypes[t.Kind()]; ok && t.PkgPath() == "" {
 		return BasicType(t.Kind())
@@ -590,13 +628,22 @@ func signatureFromReflectType(t reflect.Type, sig *Signature) {
 	}
 }
 
+// BasicType returns a TypeName for the given basic kind. If the given kind is
+// reflect.UnsafePointer, a named type is returned whose symbol represents the
+// "unsafe.Pointer" name. Other kinds result in a basic type. If the given kind
+// is not valid for a basic type (e.g. map, slice, array, chan, func, struct, or
+// interface), this function will panic.
 func BasicType(k reflect.Kind) TypeName {
+	if k == reflect.UnsafePointer {
+		return UnsafePointerType
+	}
 	if _, ok := basicTypes[k]; ok {
 		return basicTypeName(k)
 	}
 	panic(fmt.Sprintf("kind %v is not a basic type", k))
 }
 
+// PointerType returns a TypeName that represents a pointer to the given type.
 func PointerType(t TypeName) TypeName {
 	if t == nil {
 		panic("cannot create a pointer with nil element type")
@@ -604,6 +651,8 @@ func PointerType(t TypeName) TypeName {
 	return ptrTypeName{elem: t}
 }
 
+// SliceType returns a TypeName that represents a slice whose elements are of
+// the given type.
 func SliceType(t TypeName) TypeName {
 	if t == nil {
 		panic("cannot create a slice with nil element type")
@@ -611,6 +660,8 @@ func SliceType(t TypeName) TypeName {
 	return sliceTypeName{elem: t}
 }
 
+// ArrayType returns a TypeName that represents an array whose elements are of
+// the given type and that has the given length.
 func ArrayType(t TypeName, length int64) TypeName {
 	if t == nil || length < 0 {
 		panic("cannot create an array with nil element type or negative length")
@@ -618,6 +669,8 @@ func ArrayType(t TypeName, length int64) TypeName {
 	return arrayTypeName{elem: t, length: length}
 }
 
+// MapType returns a TypeName that represents a map whose keys and values are of
+// the given types.
 func MapType(k, v TypeName) TypeName {
 	if k == nil || v == nil {
 		panic("cannot create a map with nil key or element type")
@@ -625,6 +678,8 @@ func MapType(k, v TypeName) TypeName {
 	return mapTypeName{key: k, elem: v}
 }
 
+// NamedType returns a TypeName that represents a named type where the given
+// symbol is the type's qualified name.
 func NamedType(sym *Symbol) TypeName {
 	if sym == nil {
 		panic("cannot create a named type with nil symbol")
@@ -632,6 +687,9 @@ func NamedType(sym *Symbol) TypeName {
 	return (*namedTypeName)(sym)
 }
 
+// ChannelType returns a TypeName that represents a channel whose elements are
+// of the given type and that has the given direction. If a direction of 0 is
+// provided, the returned channel will be bi-directional.
 func ChannelType(t TypeName, dir reflect.ChanDir) TypeName {
 	if dir == 0 {
 		dir = reflect.BothDir
@@ -642,6 +700,8 @@ func ChannelType(t TypeName, dir reflect.ChanDir) TypeName {
 	return chanTypeName{elem: t, dir: dir}
 }
 
+// FuncType returns a TypeName that represents a non-variadic function with the
+// given argument and result value types.
 func FuncType(args []ArgType, results []ArgType) TypeName {
 	return FuncTypeFromSig(&Signature{
 		Args:    args,
@@ -649,6 +709,9 @@ func FuncType(args []ArgType, results []ArgType) TypeName {
 	})
 }
 
+// FuncTypeVariadic returns a TypeName that represents a variadic function with
+// the given argument and result value types. If the last argument type given is
+// not a slice, the returned function type is invalid.
 func FuncTypeVariadic(args []ArgType, results []ArgType) TypeName {
 	return FuncTypeFromSig(&Signature{
 		Args:       args,
@@ -657,6 +720,8 @@ func FuncTypeVariadic(args []ArgType, results []ArgType) TypeName {
 	})
 }
 
+// FuncTypeFromSig returns a TypeName that represents a function with the given
+// signature.
 func FuncTypeFromSig(sig *Signature) TypeName {
 	for _, t := range sig.Args {
 		if t.Type == nil {
@@ -674,21 +739,47 @@ func FuncTypeFromSig(sig *Signature) TypeName {
 	return (*funcTypeName)(sig)
 }
 
+// StructType returns a TypeName that represents an unnamed struct type with the
+// given fields.
 func StructType(fields ...FieldType) TypeName {
-	return structTypeName(fields)
+	return &structTypeName{fields: fields}
 }
 
+// InterfaceType returns a TypeName that represents an unnamed interface type
+// with the given embedded interfaces and explicit methods.
 func InterfaceType(embeds []*Symbol, methods ...MethodType) TypeName {
-	return interfaceTypeName{
+	return &interfaceTypeName{
 		methods: methods,
 		embeds:  embeds,
 	}
 }
 
-func WriteTypeName(tn TypeName, w io.Writer, multiLine bool, indent string) error {
-	// TODO
-	return nil
-}
+var (
+	IntType           = BasicType(reflect.Int)
+	Int8Type          = BasicType(reflect.Int8)
+	Int16Type         = BasicType(reflect.Int16)
+	Int32Type         = BasicType(reflect.Int32)
+	Int64Type         = BasicType(reflect.Int64)
+	RuneType          = Int32Type
+	UintType          = BasicType(reflect.Uint)
+	Uint8Type         = BasicType(reflect.Uint8)
+	Uint16Type        = BasicType(reflect.Uint16)
+	Uint32Type        = BasicType(reflect.Uint32)
+	Uint64Type        = BasicType(reflect.Uint64)
+	ByteType          = Uint8Type
+	UintptrType       = BasicType(reflect.Uintptr)
+	BoolType          = BasicType(reflect.Bool)
+	StringType        = BasicType(reflect.String)
+	Float32Type       = BasicType(reflect.Float32)
+	Float64Type       = BasicType(reflect.Float64)
+	Complex64Type     = BasicType(reflect.Complex64)
+	Complex128Type    = BasicType(reflect.Complex128)
+	ErrorType         = NamedType(&Symbol{Name: "error"})
+	UnsafePointerType = NamedType(&Symbol{
+		Name:    "Pointer",
+		Package: Package{ImportPath: "unsafe", Name: "unsafe"},
+	})
+)
 
 func typeNameToString(tn TypeName) string {
 	switch tn.Kind() {
@@ -804,33 +895,60 @@ func typeNameToBuffer(tn TypeName, b *bytes.Buffer) {
 
 func signatureToBuffer(sig *Signature, b *bytes.Buffer) {
 	b.WriteRune('(')
+	namedArgs := false
+	for _, arg := range sig.Args {
+		if arg.Name != "" {
+			namedArgs = true
+			break
+		}
+	}
 	for i, arg := range sig.Args {
 		if i > 0 {
 			b.WriteString(", ")
 		}
-		if arg.Name != "" {
-			b.WriteString(arg.Name)
-			b.WriteRune(' ')
+		if namedArgs {
+			if arg.Name != "" {
+				b.WriteString(arg.Name)
+				b.WriteRune(' ')
+			} else {
+				b.WriteString("_ ")
+			}
 		}
-		typeNameToBuffer(arg.Type, b)
+		if sig.IsVariadic && i == len(sig.Args)-1 {
+			b.WriteString("...")
+			typeNameToBuffer(arg.Type.Elem(), b)
+		} else {
+			typeNameToBuffer(arg.Type, b)
+		}
 	}
 	b.WriteRune(')')
 	if len(sig.Results) > 0 {
 		b.WriteRune(' ')
-		if len(sig.Results) > 1 {
+		namedResults := false
+		for _, r := range sig.Results {
+			if r.Name != "" {
+				namedResults = true
+				break
+			}
+		}
+		if len(sig.Results) > 1 || namedResults {
 			b.WriteRune('(')
 		}
 		for i, r := range sig.Results {
 			if i > 0 {
 				b.WriteString(", ")
 			}
-			if r.Name != "" {
-				b.WriteString(r.Name)
-				b.WriteRune(' ')
+			if namedResults {
+				if r.Name != "" {
+					b.WriteString(r.Name)
+					b.WriteRune(' ')
+				} else {
+					b.WriteString("_ ")
+				}
 			}
 			typeNameToBuffer(r.Type, b)
 		}
-		if len(sig.Results) > 1 {
+		if len(sig.Results) > 1 || namedResults {
 			b.WriteRune(')')
 		}
 	}
