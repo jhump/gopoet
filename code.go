@@ -70,8 +70,8 @@ func (cb *CodeBlock) RenderCode(template *template.Template, data interface{}) *
 	return cb
 }
 
-// Add adds the contents of the given CodeBlock to this one. It returns the code
-// block, for method chaining.
+// AddCode adds the contents of the given CodeBlock to this one. It returns the
+// code block, for method chaining.
 func (cb *CodeBlock) AddCode(code *CodeBlock) *CodeBlock {
 	cb.elements = append(cb.elements, code.elements...)
 	return cb
@@ -191,7 +191,10 @@ type templ struct {
 func (t *templ) isCodeElement() {}
 
 func (t *templ) writeTo(b *bytes.Buffer) {
-	t.templ.Execute(b, t.data)
+	err := t.templ.Execute(b, t.data)
+	if err != nil {
+		panic(err.Error())
+	}
 }
 
 func (t *templ) qualify(imports *Imports) {

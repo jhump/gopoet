@@ -551,11 +551,11 @@ func argsTypesForGoType(t *types.Tuple) []ArgType {
 	return args
 }
 
-// TypeNameForGoType converts the given reflect.Type into a TypeName. Note that
-// reflect.Type instances do not carry information about embedded interfaces,
-// for unnamed interface types. So the resulting TypeName will contain all
-// methods as if they were all explicit, even if some come from embedded
-// interfaces in the type's source definition.
+// TypeNameForReflectType converts the given reflect.Type into a TypeName. Note
+// that reflect.Type instances do not carry information about embedded
+// interfaces, for unnamed interface types. So the resulting TypeName will
+// contain all methods as if they were all explicit, even if some come from
+// embedded interfaces in the type's source definition.
 func TypeNameForReflectType(t reflect.Type) TypeName {
 	if _, ok := basicTypes[t.Kind()]; ok && t.PkgPath() == "" {
 		return BasicType(t.Kind())
@@ -755,26 +755,47 @@ func InterfaceType(embeds []*Symbol, methods ...MethodType) TypeName {
 }
 
 var (
-	IntType           = BasicType(reflect.Int)
-	Int8Type          = BasicType(reflect.Int8)
-	Int16Type         = BasicType(reflect.Int16)
-	Int32Type         = BasicType(reflect.Int32)
-	Int64Type         = BasicType(reflect.Int64)
-	RuneType          = Int32Type
-	UintType          = BasicType(reflect.Uint)
-	Uint8Type         = BasicType(reflect.Uint8)
-	Uint16Type        = BasicType(reflect.Uint16)
-	Uint32Type        = BasicType(reflect.Uint32)
-	Uint64Type        = BasicType(reflect.Uint64)
-	ByteType          = Uint8Type
-	UintptrType       = BasicType(reflect.Uintptr)
-	BoolType          = BasicType(reflect.Bool)
-	StringType        = BasicType(reflect.String)
-	Float32Type       = BasicType(reflect.Float32)
-	Float64Type       = BasicType(reflect.Float64)
-	Complex64Type     = BasicType(reflect.Complex64)
-	Complex128Type    = BasicType(reflect.Complex128)
-	ErrorType         = NamedType(&Symbol{Name: "error"})
+	// IntType is the type name for the builtin "int" type.
+	IntType = BasicType(reflect.Int)
+	// Int8Type is the type name for the builtin "int8" type.
+	Int8Type = BasicType(reflect.Int8)
+	// Int16Type is the type name for the builtin "int16" type.
+	Int16Type = BasicType(reflect.Int16)
+	// Int32Type is the type name for the builtin "int32" type (aka "rune").
+	Int32Type = BasicType(reflect.Int32)
+	// Int64Type is the type name for the builtin "int64" type.
+	Int64Type = BasicType(reflect.Int64)
+	// RuneType is an alias for Int32Type.
+	RuneType = Int32Type
+	// UintType is the type name for the builtin "uint" type.
+	UintType = BasicType(reflect.Uint)
+	// Uint8Type is the type name for the builtin "uint8" type (aka "byte").
+	Uint8Type = BasicType(reflect.Uint8)
+	// Uint16Type is the type name for the builtin "uint16" type.
+	Uint16Type = BasicType(reflect.Uint16)
+	// Uint32Type is the type name for the builtin "uint32" type.
+	Uint32Type = BasicType(reflect.Uint32)
+	// Uint64Type is the type name for the builtin "uint64" type.
+	Uint64Type = BasicType(reflect.Uint64)
+	// ByteType is an alias for Uint8Type.
+	ByteType = Uint8Type
+	// UintptrType is the type name for the builtin "uintptr" type.
+	UintptrType = BasicType(reflect.Uintptr)
+	// BoolType is the type name for the builtin "bool" type.
+	BoolType = BasicType(reflect.Bool)
+	// StringType is the type name for the builtin "string" type.
+	StringType = BasicType(reflect.String)
+	// Float32Type is the type name for the builtin "float32" type.
+	Float32Type = BasicType(reflect.Float32)
+	// Float64Type is the type name for the builtin "float64" type.
+	Float64Type = BasicType(reflect.Float64)
+	// Complex64Type is the type name for the builtin "complex64" type.
+	Complex64Type = BasicType(reflect.Complex64)
+	// Complex128Type is the type name for the builtin "complex128" type.
+	Complex128Type = BasicType(reflect.Complex128)
+	// ErrorType is the type name for the builtin "error" interface.
+	ErrorType = NamedType(&Symbol{Name: "error"})
+	// UnsafePointerType is the type name for the unsafe.Pointer type.
 	UnsafePointerType = NamedType(&Symbol{
 		Name:    "Pointer",
 		Package: Package{ImportPath: "unsafe", Name: "unsafe"},

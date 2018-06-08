@@ -833,15 +833,15 @@ type TypeDecl struct {
 }
 
 // NewTypeDecl creates a new declaration for the given types.
-func NewTypeDecl(vs ...*TypeSpec) *TypeDecl {
-	return &TypeDecl{Types: vs}
+func NewTypeDecl(ts ...*TypeSpec) *TypeDecl {
+	return &TypeDecl{Types: ts}
 }
 
 // AddType adds the given type to this declaration. This method returns the type
 // declaration, for method chaining.
-func (v *TypeDecl) AddType(vs *TypeSpec) *TypeDecl {
-	v.Types = append(v.Types, vs)
-	return v
+func (t *TypeDecl) AddType(ts *TypeSpec) *TypeDecl {
+	t.Types = append(t.Types, ts)
+	return t
 }
 
 // SetComment sets the declaration comment. For declarations with multiple
@@ -864,9 +864,9 @@ func (v *TypeDecl) AddType(vs *TypeSpec) *TypeDecl {
 //    type T1 int
 //
 // This method returns the type declaration, for method chaining.
-func (v *TypeDecl) SetComment(comment string) *TypeDecl {
-	v.Comment = comment
-	return v
+func (t *TypeDecl) SetComment(comment string) *TypeDecl {
+	t.Comment = comment
+	return t
 }
 
 func (t *TypeDecl) isFileElement() {}
@@ -1006,8 +1006,8 @@ func NewStructTypeSpec(typeName string, fields ...*FieldSpec) *TypeSpec {
 	return ret
 }
 
-// NewStructTypeSpec creates a new type spec for a struct with the given name
-// and given elements (explicit methods and embedded interfaces).
+// NewInterfaceTypeSpec creates a new type spec for an interface with the given
+// name and given elements (explicit methods and embedded interfaces).
 func NewInterfaceTypeSpec(typeName string, elements ...InterfaceElement) *TypeSpec {
 	ret := &TypeSpec{
 		Name:          typeName,
@@ -1518,7 +1518,7 @@ func (f *FuncSpec) RenderCode(template *template.Template, data interface{}) *Fu
 	return f
 }
 
-// Add adds the contents of the given CodeBlock to this function's body. It
+// AddCode adds the contents of the given CodeBlock to this function's body. It
 // returns the func, for method chaining.
 func (f *FuncSpec) AddCode(cb *CodeBlock) *FuncSpec {
 	f.CodeBlock.AddCode(cb)

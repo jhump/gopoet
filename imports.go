@@ -248,24 +248,6 @@ func (i *Imports) qualifySymbols(syms []*Symbol, registerIfNotFound bool) []*Sym
 	return ret
 }
 
-func (i *Imports) qualifyTypes(types []TypeName, registerIfNotFound bool) []TypeName {
-	var ret []TypeName
-	for idx, t := range types {
-		nt := i.qualifyType(t, registerIfNotFound)
-		if nt != t {
-			if ret == nil {
-				ret = make([]TypeName, len(types))
-				copy(ret, types)
-			}
-			ret[idx] = nt
-		}
-	}
-	if ret == nil {
-		return types
-	}
-	return ret
-}
-
 func (i *Imports) qualifyArgs(args []ArgType, registerIfNotFound bool) []ArgType {
 	var ret []ArgType
 	for idx, a := range args {
