@@ -1528,7 +1528,7 @@ func (f *FuncSpec) AddCode(cb *CodeBlock) *FuncSpec {
 // ToTypeName returns a type name that represents the type of this function. For
 // normal (non-method) functions, the returned type has the same signature as
 // the function. For methods, the returned type's signature includes an extra
-// arguement before any others that represents the method's receiver. This
+// argument before any others that represents the method's receiver. This
 // method panics if this is a method but it has not been added to a file since,
 // without an associated file, the package of the receiver type is unknown. It
 // can be added to a file via GoFile.AddElement.
