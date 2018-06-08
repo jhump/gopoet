@@ -1,5 +1,6 @@
 # Go Poet
-
+[![Build Status](https://travis-ci.org/jhump/gopoet.svg?branch=master)](https://travis-ci.org/jhump/gopoet)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jhump/gopoet)](https://goreportcard.com/report/github.com/jhump/gopoet)
 [![GoDoc](https://godoc.org/github.com/jhump/gopoet?status.svg)](https://godoc.org/github.com/jhump/gopoet)
 
 
