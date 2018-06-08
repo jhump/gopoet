@@ -1,25 +1,67 @@
 package gopoet
 
-import "reflect"
-
-var typeOfTypeName = reflect.TypeOf((*TypeName)(nil)).Elem()
+import (
+	"go/types"
+	"reflect"
+)
 
 func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, bool) {
 	switch data.Kind() {
 	case reflect.Interface:
-		if data.Elem().Type().Implements(typeOfTypeName) {
-			origT := data.Interface().(TypeName)
-			newT := imports.EnsureTypeImported(origT)
-			newRv := reflect.ValueOf(newT)
-			if newRv.Type().Implements(data.Type()) {
-				// should always be true; but if not (e.g. user-provided
-				// TypeName impl that provides broader impl than qualified form)
-				// it would panic with a strange error and stack trace, so just
-				// fall through below...
-				return reflect.ValueOf(newT), origT != newT
+		if data.Elem().IsValid() {
+			var newRv reflect.Value
+			switch d := data.Interface().(type) {
+			case TypeName:
+				newT := imports.EnsureTypeImported(d)
+				if newT != d {
+					newRv = reflect.ValueOf(newT)
+				}
+			case reflect.Type:
+				origT := TypeNameForReflectType(d)
+				newT := imports.EnsureTypeImported(origT)
+				if newT != origT {
+					newRv = reflect.ValueOf(newT)
+				}
+			case types.Type:
+				origT := TypeNameForGoType(d)
+				newT := imports.EnsureTypeImported(origT)
+				if newT != origT {
+					newRv = reflect.ValueOf(newT)
+				}
+			case types.Object:
+				sym := SymbolForGoObject(d)
+				switch sym := sym.(type) {
+				case Symbol:
+					newSym := imports.EnsureImported(&sym)
+					if newSym != &sym {
+						newRv = reflect.ValueOf(newSym)
+					}
+				case MethodReference:
+					newSym := imports.EnsureImported(sym.Type)
+					if newSym != sym.Type {
+						newRv = reflect.ValueOf(&MethodReference{Type: newSym, Method: sym.Method})
+					}
+				}
+			case *types.Package:
+				origP := PackageForGoType(d)
+				newP := imports.RegisterImportForPackage(origP)
+				if newP != origP.Name {
+					newRv = reflect.ValueOf(Package{Name: newP, ImportPath: origP.ImportPath})
+				}
 			}
+
+			if newRv.IsValid() && newRv.Type().Implements(data.Type()) {
+				// For TypeName, this should always be true; but for cases
+				// where we've changed the type of the value, if we try to
+				// return an incompatible type, the result will be a panic
+				// with a location and message that is not awesome for
+				// users of this package. So we'll ignore the new value if
+				// it's not the right type.
+				return newRv, true
+			}
+
+			return qualifyTemplateData(imports, data.Elem())
 		}
-		return qualifyTemplateData(imports, data.Elem())
 
 	case reflect.Struct:
 		switch t := data.Interface().(type) {

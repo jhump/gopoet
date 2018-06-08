@@ -95,10 +95,10 @@ func NewSymbol(importPath, symName string) Symbol {
 	return NewPackage(importPath).Symbol(symName)
 }
 
-// SymbolForGoObject returns the given Go types object as a Symbol or as a
-// MethodReference. If the given object is a method, it returns a
-// MethodReference. Otherwise (const, var, type, func), the returned value is a
-// Symbol.
+// SymbolForGoObject returns the given Go types object as a gopoet.Symbol or as
+// a gopoet.MethodReference. If the given object is a method, it returns a
+// method reference. Otherwise (const, var, type, non-method func), the returned
+// value is a symbol.
 func SymbolForGoObject(obj types.Object) SymbolOrMethodRef {
 	if fn, ok := obj.(*types.Func); ok {
 		sig := fn.Type().(*types.Signature)
@@ -1260,6 +1260,12 @@ func (e *InterfaceEmbed) SetComment(comment string) *InterfaceEmbed {
 	return e
 }
 
+// String returns a string representation of this embedded interface, which is
+// the same as the string representation of the referenced symbol.
+func (e *InterfaceEmbed) String() string {
+	return e.Type.String()
+}
+
 func (e *InterfaceEmbed) isInterfaceElement() {}
 
 func (e *InterfaceEmbed) writeTo(b *bytes.Buffer) {
@@ -1273,12 +1279,6 @@ func (e *InterfaceEmbed) setParent(t *TypeSpec) {
 
 func (e *InterfaceEmbed) qualify(imports *Imports) {
 	e.Type = imports.EnsureImported(e.Type)
-}
-
-// String returns a string representation of this embedded interface, which is
-// the same as the string representation of the referenced symbol.
-func (e *InterfaceEmbed) String() string {
-	return e.Type.String()
 }
 
 // InterfaceMethod is a method defined inside of an interface. This represents
@@ -1413,8 +1413,8 @@ func (f *FuncSpec) SetComment(comment string) *FuncSpec {
 }
 
 // ToSymbol returns a symbol or a method reference that refers to this func. If
-// this is a normal func (no receiver) the returned value is a *gopoet.Symbol.
-// Otherwise, if it is a method, the returned value is a *gopoet.MethodReference.
+// this is a normal func (no receiver) the returned value is a gopoet.Symbol.
+// Otherwise, if it is a method, the returned value is a gopoet.MethodReference.
 // This method panics if this type has never been added to a file since, without
 // an associated file, the package of the symbol is unknown. It can be added to
 // a file via GoFile.AddElement.
@@ -1427,12 +1427,12 @@ func (f *FuncSpec) ToSymbol() SymbolOrMethodRef {
 			Name:    f.Receiver.Type,
 			Package: f.parent.Package(),
 		}
-		return &MethodReference{
+		return MethodReference{
 			Type:   rcvrType,
 			Method: f.Name,
 		}
 	}
-	return &Symbol{
+	return Symbol{
 		Name:    f.Name,
 		Package: f.parent.Package(),
 	}

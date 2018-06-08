@@ -3,6 +3,8 @@ package gopoet
 import (
 	"bytes"
 	"fmt"
+	"go/types"
+	"reflect"
 	"text/template"
 )
 
@@ -165,18 +167,49 @@ func (l line) qualify(imports *Imports) {
 			l.args[i] = imports.EnsureAllTypesImported(a)
 		case TypeName:
 			l.args[i] = imports.EnsureTypeImported(a)
-		case interface {
-			ToSymbol() *Symbol
-		}:
+		case *ConstSpec:
 			l.args[i] = imports.EnsureImported(a.ToSymbol())
-		case interface {
-			ToMethodReference() *MethodReference
-		}:
-			mr := a.ToMethodReference()
+		case *VarSpec:
+			l.args[i] = imports.EnsureImported(a.ToSymbol())
+		case *TypeSpec:
+			l.args[i] = imports.EnsureImported(a.ToSymbol())
+		case *InterfaceMethod:
+			mr := a.ToMethodRef()
 			sym := imports.EnsureImported(mr.Type)
 			if sym != mr.Type {
 				l.args[i] = &MethodReference{Type: sym, Method: mr.Method}
 			}
+		case *FuncSpec:
+			symOrMr := a.ToSymbol()
+			switch sm := symOrMr.(type) {
+			case Symbol:
+				l.args[i] = imports.EnsureImported(&sm)
+			case MethodReference:
+				sym := imports.EnsureImported(sm.Type)
+				if sym != sm.Type {
+					l.args[i] = &MethodReference{Type: sym, Method: sm.Method}
+				}
+			}
+		case reflect.Type:
+			t := TypeNameForReflectType(a)
+			l.args[i] = imports.EnsureTypeImported(t)
+		case types.Type:
+			t := TypeNameForGoType(a)
+			l.args[i] = imports.EnsureTypeImported(t)
+		case types.Object:
+			symOrMr := SymbolForGoObject(a)
+			switch sm := symOrMr.(type) {
+			case Symbol:
+				l.args[i] = imports.EnsureImported(&sm)
+			case MethodReference:
+				sym := imports.EnsureImported(sm.Type)
+				if sym != sm.Type {
+					l.args[i] = &MethodReference{Type: sym, Method: sm.Method}
+				}
+			}
+		case *types.Package:
+			p := PackageForGoType(a)
+			l.args[i] = imports.RegisterImportForPackage(p)
 		}
 	}
 }

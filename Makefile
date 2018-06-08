@@ -31,8 +31,10 @@ vet:
 
 .PHONY: staticcheck
 staticcheck:
-	@go get honnef.co/go/tools/cmd/staticcheck
-	staticcheck ./...
+	@if [ -n "$$(go version | awk '{ print $$3 }' | grep -v devel)" ]; then \
+		go get honnef.co/go/tools/cmd/staticcheck; \
+		staticcheck ./...; \
+	fi
 
 .PHONY: unused
 unused:
