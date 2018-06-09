@@ -148,9 +148,9 @@ func (l line) qualify(imports *Imports) {
 				l.args[i] = Package{Name: p, ImportPath: a.ImportPath}
 			}
 		case Symbol:
-			l.args[i] = imports.EnsureImported(&a)
-		case *Symbol:
 			l.args[i] = imports.EnsureImported(a)
+		case *Symbol:
+			l.args[i] = imports.EnsureImported(*a)
 		case MethodReference:
 			sym := imports.EnsureImported(a.Type)
 			if sym != a.Type {
@@ -183,7 +183,7 @@ func (l line) qualify(imports *Imports) {
 			symOrMr := a.ToSymbol()
 			switch sm := symOrMr.(type) {
 			case Symbol:
-				l.args[i] = imports.EnsureImported(&sm)
+				l.args[i] = imports.EnsureImported(sm)
 			case MethodReference:
 				sym := imports.EnsureImported(sm.Type)
 				if sym != sm.Type {
@@ -200,7 +200,7 @@ func (l line) qualify(imports *Imports) {
 			symOrMr := SymbolForGoObject(a)
 			switch sm := symOrMr.(type) {
 			case Symbol:
-				l.args[i] = imports.EnsureImported(&sm)
+				l.args[i] = imports.EnsureImported(sm)
 			case MethodReference:
 				sym := imports.EnsureImported(sm.Type)
 				if sym != sm.Type {

@@ -550,7 +550,7 @@ func (c *ConstSpec) SetInitializer(cb *CodeBlock) *ConstSpec {
 // calling code should instead use SymbolAt. This method also panics if this
 // const has never been added to a file (see SymbolAt for more information about
 // this).
-func (c *ConstSpec) ToSymbol() *Symbol {
+func (c *ConstSpec) ToSymbol() Symbol {
 	if len(c.Names) != 1 {
 		panic(fmt.Sprintf("must be exactly one const to use ToSymbol(); use SymbolAt(int) instead: %v", c.Names))
 	}
@@ -590,11 +590,11 @@ func (c *ConstSpec) String() string {
 // package of the symbol is unknown. It can be added to a file directly via
 // GoFile.AddConst or indirectly by first adding to a ConstDecl which is then
 // added to a file.
-func (c *ConstSpec) SymbolAt(i int) *Symbol {
+func (c *ConstSpec) SymbolAt(i int) Symbol {
 	if c.parent == nil {
 		panic(fmt.Sprintf("cannot use const %q as symbol because it has not been associated with a file", c.Names[i]))
 	}
-	return &Symbol{
+	return Symbol{
 		Name:    c.Names[i],
 		Package: c.parent.Package(),
 	}
@@ -753,7 +753,7 @@ func (v *VarSpec) SetInitializer(cb *CodeBlock) *VarSpec {
 // var expression indicates more than one var name, in which case calling code
 // should instead use SymbolAt. This method also panics if this var has never
 // been added to a file (see SymbolAt for more information about this).
-func (v *VarSpec) ToSymbol() *Symbol {
+func (v *VarSpec) ToSymbol() Symbol {
 	if len(v.Names) != 1 {
 		panic(fmt.Sprintf("must be exactly one var to use ToSymbol(); use SymbolAt(int) instead: %v", v.Names))
 	}
@@ -793,11 +793,11 @@ func (v *VarSpec) String() string {
 // package of the symbol is unknown. It can be added to a file directly via
 // GoFile.AddVar or indirectly by first adding to a VarDecl which is then added
 // to a file.
-func (v *VarSpec) SymbolAt(i int) *Symbol {
+func (v *VarSpec) SymbolAt(i int) Symbol {
 	if v.parent == nil {
 		panic(fmt.Sprintf("cannot use var %s %v as symbol because it has not been associated with a file", v.Names[i], v.Type))
 	}
-	return &Symbol{
+	return Symbol{
 		Name:    v.Names[i],
 		Package: v.parent.Package(),
 	}
@@ -1013,7 +1013,7 @@ func NewInterfaceTypeSpec(typeName string, elements ...InterfaceElement) *TypeSp
 		Name:          typeName,
 		interfaceBody: elements,
 	}
-	var embeds []*Symbol
+	var embeds []Symbol
 	var methods []MethodType
 	for _, e := range elements {
 		e.setParent(ret)
@@ -1045,14 +1045,14 @@ func (t *TypeSpec) SetComment(comment string) *TypeSpec {
 // added to a file since, without an associated file, the package of the symbol
 // is unknown. It can be added to a file directly via GoFile.AddType or
 // indirectly by first adding to a TypeDecl which is then added to a file.
-func (t *TypeSpec) ToSymbol() *Symbol {
+func (t *TypeSpec) ToSymbol() Symbol {
 	if t.Name == "" {
 		panic("cannot use unnamed type as symbol")
 	}
 	if t.parent == nil {
 		panic(fmt.Sprintf("cannot use type %s as symbol because it has not been associated with a file", t.Name))
 	}
-	return &Symbol{
+	return Symbol{
 		Name:    t.Name,
 		Package: t.parent.Package(),
 	}
@@ -1146,6 +1146,7 @@ func (t *TypeSpec) writeUnderlying(b *bytes.Buffer) {
 	default:
 		b.WriteRune(' ')
 		typeNameToBuffer(t.underlying, b)
+		b.WriteRune('\n')
 	}
 }
 
@@ -1227,6 +1228,8 @@ func (f *FieldSpec) writeTo(b *bytes.Buffer) {
 			fmt.Fprintf(b, " %q", tag)
 		}
 	}
+
+	b.WriteRune('\n')
 }
 
 // InterfaceElement is an element inside of an interface definition. This can be
@@ -1242,13 +1245,13 @@ type InterfaceElement interface {
 // InterfaceEmbed is an embedded interface inside of an interface definition.
 type InterfaceEmbed struct {
 	Comment string
-	Type    *Symbol
+	Type    Symbol
 	parent  *TypeSpec
 }
 
 // NewInterfaceEmbed returns an embedded interface for the interface type named
 // by the given symbol.
-func NewInterfaceEmbed(s *Symbol) *InterfaceEmbed {
+func NewInterfaceEmbed(s Symbol) *InterfaceEmbed {
 	return &InterfaceEmbed{Type: s}
 }
 
@@ -1423,7 +1426,7 @@ func (f *FuncSpec) ToSymbol() SymbolOrMethodRef {
 		panic(fmt.Sprintf("cannot use func %s as symbol because it has not been associated with a file", f.Name))
 	}
 	if f.Receiver != nil {
-		rcvrType := &Symbol{
+		rcvrType := Symbol{
 			Name:    f.Receiver.Type,
 			Package: f.parent.Package(),
 		}
@@ -1537,7 +1540,7 @@ func (f *FuncSpec) ToTypeName() TypeName {
 		if f.parent == nil {
 			panic(fmt.Sprintf("cannot determine TypeName for method %s because it has not been associated with a file", f.Name))
 		}
-		rcvrType := NamedType(&Symbol{
+		rcvrType := NamedType(Symbol{
 			Name:    f.Receiver.Type,
 			Package: f.parent.Package(),
 		})
@@ -1679,7 +1682,7 @@ func NewPointerReceiverForType(name string, rcvrType TypeNameOrSpec) *ReceiverSp
 // This is a reference to the Write method for the Buffer type in the "bytes"
 // standard package.
 type MethodReference struct {
-	Type   *Symbol
+	Type   Symbol
 	Method string
 }
 

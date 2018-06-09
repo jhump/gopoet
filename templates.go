@@ -32,8 +32,8 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 				sym := SymbolForGoObject(d)
 				switch sym := sym.(type) {
 				case Symbol:
-					newSym := imports.EnsureImported(&sym)
-					if newSym != &sym {
+					newSym := imports.EnsureImported(sym)
+					if newSym != sym {
 						newRv = reflect.ValueOf(newSym)
 					}
 				case MethodReference:
@@ -71,10 +71,9 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 				return reflect.ValueOf(Package{Name: p, ImportPath: t.ImportPath}), true
 			}
 		case Symbol:
-			oldSym := &t
-			newSym := imports.EnsureImported(oldSym)
-			if newSym != oldSym {
-				return reflect.ValueOf(newSym).Elem(), true
+			newSym := imports.EnsureImported(t)
+			if newSym != t {
+				return reflect.ValueOf(newSym), true
 			}
 		case MethodReference:
 			newSym := imports.EnsureImported(t.Type)
@@ -116,9 +115,9 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 				return reflect.ValueOf(&Package{Name: p, ImportPath: t.ImportPath}), true
 			}
 		case *Symbol:
-			newSym := imports.EnsureImported(t)
-			if newSym != t {
-				return reflect.ValueOf(newSym), true
+			newSym := imports.EnsureImported(*t)
+			if newSym != *t {
+				return reflect.ValueOf(&newSym), true
 			}
 		case *MethodReference:
 			newSym := imports.EnsureImported(t.Type)

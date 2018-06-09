@@ -97,18 +97,18 @@ func (i *Imports) prefixForPackage(importPath, packageName string, registerIfNot
 // package then a symbol is returned whose Package has an empty Name. That way
 // calling String() on the returned symbol will correctly elide the package
 // prefix.
-func (i *Imports) EnsureImported(sym *Symbol) *Symbol {
+func (i *Imports) EnsureImported(sym Symbol) Symbol {
 	return i.qualify(sym, true)
 }
 
 // Qualify returns a new symbol that has the correct package prefix, based on
 // how the given symbol's package was imported/aliased. This method panics if
 // symbol's package was never registered.
-func (i *Imports) Qualify(sym *Symbol) *Symbol {
+func (i *Imports) Qualify(sym Symbol) Symbol {
 	return i.qualify(sym, false)
 }
 
-func (i *Imports) qualify(sym *Symbol, registerIfNotFound bool) *Symbol {
+func (i *Imports) qualify(sym Symbol, registerIfNotFound bool) Symbol {
 	if sym.Package.Name == "" && sym.Package.ImportPath == "" {
 		return sym
 	}
@@ -118,7 +118,7 @@ func (i *Imports) qualify(sym *Symbol, registerIfNotFound bool) *Symbol {
 	}
 	if name != sym.Package.Name {
 		pkg := Package{Name: name, ImportPath: sym.Package.ImportPath}
-		return &Symbol{Package: pkg, Name: sym.Name}
+		return Symbol{Package: pkg, Name: sym.Name}
 	}
 	return sym
 }
@@ -230,13 +230,13 @@ func sameSlice(s1 interface{}, s2 interface{}) bool {
 	return r1.Pointer() == r2.Pointer() && r1.Len() == r2.Len()
 }
 
-func (i *Imports) qualifySymbols(syms []*Symbol, registerIfNotFound bool) []*Symbol {
-	var ret []*Symbol
+func (i *Imports) qualifySymbols(syms []Symbol, registerIfNotFound bool) []Symbol {
+	var ret []Symbol
 	for idx, s := range syms {
 		nt := i.qualify(s, registerIfNotFound)
 		if nt != s {
 			if ret == nil {
-				ret = make([]*Symbol, len(syms))
+				ret = make([]Symbol, len(syms))
 				copy(ret, syms)
 			}
 			ret[idx] = nt
