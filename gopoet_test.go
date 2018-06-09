@@ -10,6 +10,9 @@ import (
 	"github.com/jhump/gopoet"
 )
 
+// regenerate: If true "golden" outputs are re-generated when the test is run.
+// If false, the actual generated code is compared against previously-generated
+// outpus in the "test-outputs" sub-folder.
 var regenerate = false
 
 func TestSimpleEndToEnd(t *testing.T) {
@@ -57,8 +60,15 @@ func TestSimpleEndToEnd(t *testing.T) {
 				nil)).
 			AddResult("", gopoet.ErrorType).
 			Printlnf("if foo == %s {", foo).
-			Printlnf("    return %s(%s(bar))", gopoet.NewSymbol("errors", "New"), gopoet.NewSymbol("strings", "Join")).
-			Printlnf("}")).
+			Printlnf("    return %s(%s(bar, %s))", gopoet.NewSymbol("errors", "New"), gopoet.NewSymbol("strings", "Join"), vfoo).
+			Printlnf("}").
+			Printlnf("bools := make([]bool, len(bar))").
+			Printlnf("for i := range bar {").
+			Printlnf("    _, bools[i] = vmap[bar[i]]").
+			Printlnf("}").
+			Printlnf("ch := make(chan struct{}, 1024)").
+			Printlnf("baz(ch, bools...)").
+			Printlnf("return nil")).
 		AddElement(gopoet.NewMethod(gopoet.NewReceiverForType("s", fooState), "String").
 			AddResult("", gopoet.StringType).
 			Printlnf("return %q", "foo")).
