@@ -219,14 +219,18 @@ func WriteGoFile(w io.Writer, f *GoFile) error {
 // If the function returns an error for any file, this function aborts and
 // returns the error, but it makes no effort to clean up any previously written
 // files that may have already been written without error.
-func WriteGoFiles(outFn func(path string) (io.Writer, error), files ...*GoFile) error {
+func WriteGoFiles(outFn func(path string) (io.WriteCloser, error), files ...*GoFile) error {
 	for _, file := range files {
 		p := filepath.Join(file.Package().ImportPath, file.Name)
 		w, err := outFn(p)
 		if err != nil {
 			return err
 		}
-		if err := WriteGoFile(w, file); err != nil {
+		err = func() error {
+			defer w.Close()
+			return WriteGoFile(w, file)
+		}()
+		if err != nil {
 			return err
 		}
 	}
@@ -237,14 +241,13 @@ func WriteGoFiles(outFn func(path string) (io.Writer, error), files ...*GoFile) 
 // os.Open as the function to open a writer for each file. A full path is first
 // computed by joining the given root directory with the file's path.
 func WriteGoFilesToFileSystem(rootDir string, files ...*GoFile) error {
-	return WriteGoFiles(func(path string) (io.Writer, error) {
+	return WriteGoFiles(func(path string) (io.WriteCloser, error) {
 		fullPath := filepath.Join(rootDir, path)
 		dir := filepath.Dir(fullPath)
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 			return nil, err
 		}
 		return os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-
 	}, files...)
 }
 
@@ -1345,11 +1348,11 @@ func (m *InterfaceMethod) ToTypeName() TypeName {
 
 // ToMethodRef returns a method reference that can be interpolated into a code
 // block to form a method expression in code.
-func (m *InterfaceMethod) ToMethodRef() *MethodReference {
+func (m *InterfaceMethod) ToMethodRef() MethodReference {
 	if m.parent == nil {
 		panic(fmt.Sprintf("cannot construct MethodReference for method %s because it has not been associated with a type", m.Name))
 	}
-	return &MethodReference{
+	return MethodReference{
 		Type:   m.parent.ToSymbol(),
 		Method: m.Name,
 	}

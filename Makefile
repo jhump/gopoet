@@ -3,15 +3,15 @@ default: deps checkgofmt vet predeclared staticcheck unused ineffassign golint t
 
 .PHONY: deps
 deps:
-	go get -d -v -t ./
+	go get -d -v -t ./...
 
 .PHONY: updatedeps
 updatedeps:
-	go get -d -v -t -u -f ./
+	go get -d -v -t -u -f ./...
 
 .PHONY: install
 install:
-	go install ./
+	go install ./...
 
 .PHONY: checkgofmt
 checkgofmt:
@@ -27,20 +27,20 @@ checkgofmt:
 
 .PHONY: vet
 vet:
-	go vet ./
+	go vet ./...
 
 .PHONY: staticcheck
 staticcheck:
 	@if [ -n "$$(go version | awk '{ print $$3 }' | grep -v devel)" ]; then \
 		go get honnef.co/go/tools/cmd/staticcheck; \
-		echo staticcheck ./; \
-		staticcheck ./; \
+		echo staticcheck ./...; \
+		staticcheck ./...; \
 	fi
 
 .PHONY: unused
 unused:
 	@go get honnef.co/go/tools/cmd/unused
-	unused ./
+	unused ./...
 
 .PHONY: ineffassign
 ineffassign:
@@ -66,17 +66,17 @@ errcheck:
 
 .PHONY: test
 test:
-	go test -cover -race ./
+	go test -cover -race ./...
 
 .PHONY: generate
 generate:
-	go generate ./
+	go generate ./...
 
 .PHONY: testcover
 testcover:
-	@echo go test -race -covermode=atomic ./
+	@echo go test -race -covermode=atomic ./...
 	@echo "mode: atomic" > coverage.out
-	@for dir in $$(go list ./); do \
+	@for dir in $$(go list ./...); do \
 		go test -race -coverprofile profile.out -covermode=atomic $$dir ; \
 		if [ -f profile.out ]; then \
 			tail -n +2 profile.out >> coverage.out && rm profile.out ; \
