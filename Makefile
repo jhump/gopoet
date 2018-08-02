@@ -66,7 +66,7 @@ errcheck:
 
 .PHONY: test
 test:
-	go test -cover -race ./
+	go test -cover -race ./...
 
 .PHONY: generate
 generate:
@@ -74,9 +74,9 @@ generate:
 
 .PHONY: testcover
 testcover:
-	@echo go test -race -covermode=atomic ./
+	@echo go test -race -covermode=atomic ./...
 	@echo "mode: atomic" > coverage.out
-	@for dir in $$(go list ./); do \
+	@for dir in $$(go list ./...); do \
 		go test -race -coverprofile profile.out -covermode=atomic $$dir ; \
 		if [ -f profile.out ]; then \
 			tail -n +2 profile.out >> coverage.out && rm profile.out ; \
