@@ -143,7 +143,12 @@ type GoFile struct {
 	// The name of the file. This should not include a path, only a file
 	// name with a ".go" extension.
 	Name string
-	// Doc comments that will appear before the package declaration.
+	// Comment that appears at the top of the file, before any package doc. This
+	// is typically a copyright or other disclaimer but can be any file comments
+	// that should not be construed as package documentation.
+	FileComment string
+	// Doc comments that will appear before the package declaration. These will
+	// be used as Go package documentation by the godoc tool and website.
 	PackageComment string
 	// The package name that will be used in the package declaration.
 	PackageName string
@@ -336,6 +341,12 @@ func (f *GoFile) Package() Package {
 }
 
 func (f *GoFile) writeTo(w *bytes.Buffer) error {
+	writeComment(f.FileComment, w)
+	if f.FileComment != "" {
+		// separate file comment from package doc
+		w.WriteRune('\n')
+	}
+
 	// package and imports pre-amble
 	writeComment(f.PackageComment, w)
 	if f.CanonicalImportPath != "" {
