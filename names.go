@@ -35,6 +35,9 @@ func Export(s string) string {
 	if r == utf8.RuneError {
 		panic(fmt.Sprintf("%q is not valid UTF8", s))
 	}
+	if unicode.IsUpper(r) {
+		return s // already exported
+	}
 	upperR := unicode.ToUpper(r)
 	if upperR == r {
 		if r == '_' {

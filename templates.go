@@ -68,23 +68,73 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 		case Package:
 			p := imports.RegisterImportForPackage(t)
 			if p != t.Name {
-				return reflect.ValueOf(Package{Name: p, ImportPath: t.ImportPath}), true
+				return reflect.ValueOf(&Package{Name: p, ImportPath: t.ImportPath}).Elem(), true
 			}
 		case Symbol:
 			newSym := imports.EnsureImported(t)
 			if newSym != t {
-				return reflect.ValueOf(newSym), true
+				return reflect.ValueOf(&newSym).Elem(), true
 			}
 		case MethodReference:
 			newSym := imports.EnsureImported(t.Type)
 			if newSym != t.Type {
-				return reflect.ValueOf(MethodReference{Type: newSym, Method: t.Method}), true
+				return reflect.ValueOf(&MethodReference{Type: newSym, Method: t.Method}).Elem(), true
 			}
 		case Signature:
 			oldSig := &t
 			newSig := imports.EnsureAllTypesImported(oldSig)
 			if newSig != oldSig {
 				return reflect.ValueOf(newSig).Elem(), true
+			}
+		case ConstSpec:
+			if t.parent != nil {
+				oldPkg := t.parent.PackageName
+				newPkg := imports.RegisterImportForPackage(t.parent.Package())
+				if newPkg != oldPkg {
+					newCs := t
+					newCs.parent = &GoFile{PackageName: newPkg}
+					return reflect.ValueOf(&newCs).Elem(), true
+				}
+			}
+		case VarSpec:
+			if t.parent != nil {
+				oldPkg := t.parent.PackageName
+				newPkg := imports.RegisterImportForPackage(t.parent.Package())
+				if newPkg != oldPkg {
+					newVs := t
+					newVs.parent = &GoFile{PackageName: newPkg}
+					return reflect.ValueOf(&newVs).Elem(), true
+				}
+			}
+		case TypeSpec:
+			if t.parent != nil {
+				oldPkg := t.parent.PackageName
+				newPkg := imports.RegisterImportForPackage(t.parent.Package())
+				if newPkg != oldPkg {
+					newTs := t
+					newTs.parent = &GoFile{PackageName: newPkg}
+					return reflect.ValueOf(&newTs).Elem(), true
+				}
+			}
+		case FuncSpec:
+			if t.parent != nil {
+				oldPkg := t.parent.PackageName
+				newPkg := imports.RegisterImportForPackage(t.parent.Package())
+				if newPkg != oldPkg {
+					newFs := t
+					newFs.parent = &GoFile{PackageName: newPkg}
+					return reflect.ValueOf(&newFs).Elem(), true
+				}
+			}
+		case InterfaceEmbed:
+			newEmbed := t
+			if newEmbed.qualify(imports) {
+				return reflect.ValueOf(&newEmbed).Elem(), true
+			}
+		case InterfaceMethod:
+			newMethod := t
+			if newMethod.qualify(imports) {
+				return reflect.ValueOf(&newMethod).Elem(), true
 			}
 		case Imports:
 			// intentionally do not touch these
@@ -108,78 +158,13 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 		}
 
 	case reflect.Ptr:
-		switch t := data.Interface().(type) {
-		case *Package:
-			p := imports.RegisterImportForPackage(*t)
-			if p != t.Name {
-				return reflect.ValueOf(&Package{Name: p, ImportPath: t.ImportPath}), true
+		if newElem, changed := qualifyTemplateData(imports, data.Elem()); changed {
+			if newElem.CanAddr() {
+				return newElem.Addr(), true
 			}
-		case *Symbol:
-			newSym := imports.EnsureImported(*t)
-			if newSym != *t {
-				return reflect.ValueOf(&newSym), true
-			}
-		case *MethodReference:
-			newSym := imports.EnsureImported(t.Type)
-			if newSym != t.Type {
-				return reflect.ValueOf(&MethodReference{Type: newSym, Method: t.Method}), true
-			}
-		case *Signature:
-			newSig := imports.EnsureAllTypesImported(t)
-			if newSig != t {
-				return reflect.ValueOf(newSig), true
-			}
-		case *ConstSpec:
-			if t.parent != nil {
-				oldPkg := t.parent.PackageName
-				newPkg := imports.RegisterImportForPackage(t.parent.Package())
-				if newPkg != oldPkg {
-					newCs := *t
-					newCs.parent = &GoFile{PackageName: newPkg}
-					return reflect.ValueOf(&newCs), true
-				}
-			}
-		case *VarSpec:
-			if t.parent != nil {
-				oldPkg := t.parent.PackageName
-				newPkg := imports.RegisterImportForPackage(t.parent.Package())
-				if newPkg != oldPkg {
-					newVs := *t
-					newVs.parent = &GoFile{PackageName: newPkg}
-					return reflect.ValueOf(&newVs), true
-				}
-			}
-		case *TypeSpec:
-			if t.parent != nil {
-				oldPkg := t.parent.PackageName
-				newPkg := imports.RegisterImportForPackage(t.parent.Package())
-				if newPkg != oldPkg {
-					newTs := *t
-					newTs.parent = &GoFile{PackageName: newPkg}
-					return reflect.ValueOf(&newTs), true
-				}
-			}
-		case *FuncSpec:
-			if t.parent != nil {
-				oldPkg := t.parent.PackageName
-				newPkg := imports.RegisterImportForPackage(t.parent.Package())
-				if newPkg != oldPkg {
-					newFs := *t
-					newFs.parent = &GoFile{PackageName: newPkg}
-					return reflect.ValueOf(&newFs), true
-				}
-			}
-		case *InterfaceEmbed:
-			t.qualify(imports)
-		default:
-			if newElem, changed := qualifyTemplateData(imports, data.Elem()); changed {
-				if newElem.CanAddr() {
-					return newElem.Addr(), true
-				}
-				dest := reflect.New(newElem.Type())
-				dest.Elem().Set(newElem)
-				return dest, true
-			}
+			dest := reflect.New(newElem.Type())
+			dest.Elem().Set(newElem)
+			return dest, true
 		}
 
 	case reflect.Array, reflect.Slice:

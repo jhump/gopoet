@@ -454,14 +454,15 @@ func (c *ConstDecl) writeTo(b *bytes.Buffer) {
 		writeComment(c.Comment, b)
 		b.WriteString("const (\n")
 		for _, cs := range c.Consts {
-			cs.writeTo(b)
+			cs.writeTo(b, true)
 		}
 		b.WriteString(")\n")
 		return
 	}
 
+	writeComment(c.Consts[0].Comment, b)
 	b.WriteString("const ")
-	c.Consts[0].writeTo(b)
+	c.Consts[0].writeTo(b, false)
 }
 
 func (c *ConstDecl) setParent(f *GoFile) {
@@ -614,8 +615,10 @@ func (c *ConstSpec) SymbolAt(i int) Symbol {
 	}
 }
 
-func (c *ConstSpec) writeTo(b *bytes.Buffer) {
-	writeComment(c.Comment, b)
+func (c *ConstSpec) writeTo(b *bytes.Buffer, includeComment bool) {
+	if includeComment {
+		writeComment(c.Comment, b)
+	}
 	fmt.Fprintf(b, "%s", strings.Join(c.Names, ", "))
 	if c.Type != nil {
 		fmt.Fprintf(b, " %v", c.Type)
@@ -687,14 +690,15 @@ func (v *VarDecl) writeTo(b *bytes.Buffer) {
 		writeComment(v.Comment, b)
 		b.WriteString("var (\n")
 		for _, vs := range v.Vars {
-			vs.writeTo(b)
+			vs.writeTo(b, true)
 		}
 		b.WriteString(")\n")
 		return
 	}
 
+	writeComment(v.Vars[0].Comment, b)
 	b.WriteString("var ")
-	v.Vars[0].writeTo(b)
+	v.Vars[0].writeTo(b, false)
 }
 
 func (v *VarDecl) setParent(f *GoFile) {
@@ -817,8 +821,10 @@ func (v *VarSpec) SymbolAt(i int) Symbol {
 	}
 }
 
-func (v *VarSpec) writeTo(b *bytes.Buffer) {
-	writeComment(v.Comment, b)
+func (v *VarSpec) writeTo(b *bytes.Buffer, includeComment bool) {
+	if includeComment {
+		writeComment(v.Comment, b)
+	}
 	fmt.Fprintf(b, "%s", strings.Join(v.Names, ", "))
 	if v.Type != nil {
 		fmt.Fprintf(b, " %v", v.Type)
@@ -890,14 +896,15 @@ func (t *TypeDecl) writeTo(b *bytes.Buffer) {
 		writeComment(t.Comment, b)
 		b.WriteString("type (\n")
 		for _, ts := range t.Types {
-			ts.writeTo(b)
+			ts.writeTo(b, true)
 		}
 		b.WriteString(")\n")
 		return
 	}
 
+	writeComment(t.Types[0].Comment, b)
 	b.WriteString("type ")
-	t.Types[0].writeTo(b)
+	t.Types[0].writeTo(b, false)
 }
 
 func (t *TypeDecl) setParent(f *GoFile) {
@@ -1133,8 +1140,10 @@ func (t *TypeSpec) qualify(imports *Imports) {
 	}
 }
 
-func (t *TypeSpec) writeTo(b *bytes.Buffer) {
-	writeComment(t.Comment, b)
+func (t *TypeSpec) writeTo(b *bytes.Buffer, includeComment bool) {
+	if includeComment {
+		writeComment(t.Comment, b)
+	}
 	b.WriteString(t.Name)
 	b.WriteRune(' ')
 	if t.isAlias {
@@ -1253,7 +1262,7 @@ type InterfaceElement interface {
 	isInterfaceElement()
 	writeTo(b *bytes.Buffer)
 	setParent(*TypeSpec)
-	qualify(*Imports)
+	qualify(*Imports) bool
 }
 
 // InterfaceEmbed is an embedded interface inside of an interface definition.
@@ -1294,8 +1303,10 @@ func (e *InterfaceEmbed) setParent(t *TypeSpec) {
 	e.parent = t
 }
 
-func (e *InterfaceEmbed) qualify(imports *Imports) {
+func (e *InterfaceEmbed) qualify(imports *Imports) bool {
+	oldType := e.Type
 	e.Type = imports.EnsureImported(e.Type)
+	return oldType != e.Type
 }
 
 // InterfaceMethod is a method defined inside of an interface. This represents
@@ -1310,6 +1321,14 @@ type InterfaceMethod struct {
 // NewInterfaceMethod returns a method with the given name.
 func NewInterfaceMethod(name string) *InterfaceMethod {
 	return &InterfaceMethod{Name: name}
+}
+
+// SetComment sets the comment on this interface method that will be rendered
+// in the interface definition. This returns the interface method, for call
+// chaining.
+func (m *InterfaceMethod) SetComment(comment string) *InterfaceMethod {
+	m.Comment = comment
+	return m
 }
 
 // AddArg adds an argument to the signature of this method. The given name can
@@ -1389,11 +1408,13 @@ func (m *InterfaceMethod) setParent(t *TypeSpec) {
 	m.parent = t
 }
 
-func (m *InterfaceMethod) qualify(imports *Imports) {
+func (m *InterfaceMethod) qualify(imports *Imports) bool {
 	newSig := imports.EnsureAllTypesImported(&m.Signature)
 	if newSig != &m.Signature {
 		m.Signature = *newSig
+		return true
 	}
+	return false
 }
 
 // FuncSpec is a FileElement representing a func or method definition. The Name
