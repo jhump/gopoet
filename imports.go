@@ -72,6 +72,7 @@ func (i *Imports) prefixForPackage(importPath, packageName string, registerIfNot
 	if packageName == "" {
 		p = path.Base(importPath)
 	}
+	pkgBase := p
 	suffix := 1
 	for {
 		if _, ok := i.pathsByName[p]; !ok {
@@ -86,7 +87,7 @@ func (i *Imports) prefixForPackage(importPath, packageName string, registerIfNot
 			}
 			return p + "."
 		}
-		p = fmt.Sprintf("%s%d", packageName, suffix)
+		p = fmt.Sprintf("%s%d", pkgBase, suffix)
 		suffix++
 	}
 }
