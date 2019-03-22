@@ -503,6 +503,7 @@ func TypeNameForGoType(t types.Type) TypeName {
 	case *types.Interface:
 		embeds := make([]Symbol, t.NumEmbeddeds())
 		for i := 0; i < t.NumEmbeddeds(); i++ {
+			//lint:ignore SA1019 we still support Go 1.10 which does not have non-deprecated EmbeddedType
 			obj := t.Embedded(i).Obj()
 			embeds[i] = Symbol{
 				Name:    obj.Name(),

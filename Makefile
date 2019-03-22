@@ -1,5 +1,5 @@
 .PHONY: default
-default: deps checkgofmt vet predeclared staticcheck unused ineffassign golint test
+default: deps checkgofmt vet predeclared staticcheck ineffassign golint test
 
 .PHONY: deps
 deps:
@@ -36,11 +36,6 @@ staticcheck:
 		echo staticcheck ./...; \
 		staticcheck ./...; \
 	fi
-
-.PHONY: unused
-unused:
-	@go get honnef.co/go/tools/cmd/unused
-	unused ./...
 
 .PHONY: ineffassign
 ineffassign:
