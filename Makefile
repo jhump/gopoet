@@ -31,11 +31,8 @@ vet:
 
 .PHONY: staticcheck
 staticcheck:
-	@if [ -n "$$(go version | awk '{ print $$3 }' | grep -v devel)" ]; then \
-		go get honnef.co/go/tools/cmd/staticcheck; \
-		echo staticcheck ./...; \
-		staticcheck ./...; \
-	fi
+	@go get honnef.co/go/tools/cmd/staticcheck
+	staticcheck ./...
 
 .PHONY: ineffassign
 ineffassign:
