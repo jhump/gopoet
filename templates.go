@@ -9,6 +9,7 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 	switch data.Kind() {
 	case reflect.Interface:
 		if data.Elem().IsValid() {
+			qualified := true
 			var newRv reflect.Value
 			switch d := data.Interface().(type) {
 			case TypeName:
@@ -44,20 +45,25 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 				}
 			case *types.Package:
 				origP := PackageForGoType(d)
-				newP := imports.RegisterImportForPackage(origP)
+				newP := imports.registerPackage(origP)
 				if newP != origP.Name {
 					newRv = reflect.ValueOf(Package{Name: newP, ImportPath: origP.ImportPath})
 				}
+			default:
+				qualified = false
 			}
 
-			if newRv.IsValid() && newRv.Type().Implements(data.Type()) {
-				// For TypeName, this should always be true; but for cases
-				// where we've changed the type of the value, if we try to
-				// return an incompatible type, the result will be a panic
-				// with a location and message that is not awesome for
-				// users of this package. So we'll ignore the new value if
-				// it's not the right type.
-				return newRv, true
+			if qualified {
+				if newRv.IsValid() && newRv.Type().Implements(data.Type()) {
+					// For TypeName, this should always be true; but for cases
+					// where we've changed the type of the value, if we try to
+					// return an incompatible type, the result will be a panic
+					// with a location and message that is not awesome for
+					// users of this package. So we'll ignore the new value if
+					// it's not the right type.
+					return newRv, true
+				}
+				return data, false
 			}
 
 			return qualifyTemplateData(imports, data.Elem())
@@ -66,7 +72,7 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 	case reflect.Struct:
 		switch t := data.Interface().(type) {
 		case Package:
-			p := imports.RegisterImportForPackage(t)
+			p := imports.registerPackage(t)
 			if p != t.Name {
 				return reflect.ValueOf(&Package{Name: p, ImportPath: t.ImportPath}).Elem(), true
 			}
@@ -89,7 +95,7 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 		case ConstSpec:
 			if t.parent != nil {
 				oldPkg := t.parent.PackageName
-				newPkg := imports.RegisterImportForPackage(t.parent.Package())
+				newPkg := imports.registerPackage(t.parent.Package())
 				if newPkg != oldPkg {
 					newCs := t
 					newCs.parent = &GoFile{PackageName: newPkg}
@@ -99,7 +105,7 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 		case VarSpec:
 			if t.parent != nil {
 				oldPkg := t.parent.PackageName
-				newPkg := imports.RegisterImportForPackage(t.parent.Package())
+				newPkg := imports.registerPackage(t.parent.Package())
 				if newPkg != oldPkg {
 					newVs := t
 					newVs.parent = &GoFile{PackageName: newPkg}
@@ -109,7 +115,7 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 		case TypeSpec:
 			if t.parent != nil {
 				oldPkg := t.parent.PackageName
-				newPkg := imports.RegisterImportForPackage(t.parent.Package())
+				newPkg := imports.registerPackage(t.parent.Package())
 				if newPkg != oldPkg {
 					newTs := t
 					newTs.parent = &GoFile{PackageName: newPkg}
@@ -119,7 +125,7 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 		case FuncSpec:
 			if t.parent != nil {
 				oldPkg := t.parent.PackageName
-				newPkg := imports.RegisterImportForPackage(t.parent.Package())
+				newPkg := imports.registerPackage(t.parent.Package())
 				if newPkg != oldPkg {
 					newFs := t
 					newFs.parent = &GoFile{PackageName: newPkg}
@@ -141,7 +147,16 @@ func qualifyTemplateData(imports *Imports, data reflect.Value) (reflect.Value, b
 		default:
 			var newStruct reflect.Value
 			for i := 0; i < data.NumField(); i++ {
-				newV, changedV := qualifyTemplateData(imports, data.Field(i))
+				var newV reflect.Value
+				var changedV bool
+				fld, ok := getField(data, i)
+				if !ok {
+					// do not recurse
+					newV = data.Field(i)
+					changedV = false
+				} else {
+					newV, changedV = qualifyTemplateData(imports, fld)
+				}
 				if newStruct.IsValid() {
 					newStruct.Field(i).Set(newV)
 				} else if changedV {
