@@ -39,6 +39,17 @@ func (i *Imports) RegisterImportForPackage(pkg Package) string {
 	return i.RegisterImport(pkg.ImportPath, pkg.Name)
 }
 
+// registerPackage is like RegisterImportForPackage, but instead of returning
+// the prefix (which includes a trailing dot if non-empty), it just returns the
+// package alias.
+func (i *Imports) registerPackage(pkg Package) string {
+	p := i.RegisterImportForPackage(pkg)
+	if len(p) > 0 && p[len(p)-1] == '.' {
+		p = p[:len(p)-1]
+	}
+	return p
+}
+
 // RegisterImport "imports" the specified package and returns the package prefix
 // to use for symbols in the imported package. It is safe to import the same
 // package repeatedly -- the same prefix will be returned every time. If an

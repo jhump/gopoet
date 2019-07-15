@@ -138,12 +138,12 @@ func (l line) qualify(imports *Imports) {
 	for i := range l.args {
 		switch a := l.args[i].(type) {
 		case Package:
-			p := imports.RegisterImportForPackage(a)
+			p := imports.registerPackage(a)
 			if p != a.Name {
 				l.args[i] = Package{Name: p, ImportPath: a.ImportPath}
 			}
 		case *Package:
-			p := imports.RegisterImportForPackage(*a)
+			p := imports.registerPackage(*a)
 			if p != a.Name {
 				l.args[i] = Package{Name: p, ImportPath: a.ImportPath}
 			}
@@ -209,7 +209,7 @@ func (l line) qualify(imports *Imports) {
 			}
 		case *types.Package:
 			p := PackageForGoType(a)
-			l.args[i] = imports.RegisterImportForPackage(p)
+			l.args[i] = imports.registerPackage(p)
 		}
 	}
 }
