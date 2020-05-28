@@ -1,5 +1,5 @@
-.PHONY: default
-default: deps checkgofmt vet predeclared staticcheck ineffassign golint test
+.PHONY: ci
+ci: deps checkgofmt vet predeclared staticcheck ineffassign golint test
 
 .PHONY: deps
 deps:
@@ -42,7 +42,7 @@ ineffassign:
 .PHONY: predeclared
 predeclared:
 	@go get github.com/nishanths/predeclared
-	predeclared .
+	predeclared ./...
 
 # Intentionally omitted from CI, but target here for ad-hoc reports.
 .PHONY: golint
