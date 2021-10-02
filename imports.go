@@ -61,6 +61,39 @@ func (i *Imports) RegisterImport(importPath, packageName string) string {
 	return i.prefixForPackage(importPath, packageName, true)
 }
 
+// RegisterAliasedImport "imports" the specified package with a given alias and
+// returns the package prefix to use for symbols in the imported package. It is
+// safe to import the same package repeatedly using the same alias.
+//
+// If no
+//
+// However, this function will return an error if the given importPath has
+// already been registered and cannot be identified using the provided package
+// name.
+func (i *Imports) RegisterAliasedImport(importPath, packageName string) (string, error) {
+	def, exists := i.importsByPath[importPath]
+	if exists && def.packageName != packageName {
+		return "", fmt.Errorf("registered package name %q differs from argument %q for import path %q. Due to Go Poet limitations, only one import alias is allowed for a particular import path. Consider using one of the other Register* functions if your application is not sensitive to the exact alias", def.packageName, packageName, importPath)
+	} else if conflictingImportPath, conflicts := i.pathsByName[packageName]; conflicts {
+		return "", fmt.Errorf("alias %q conflicts with existing import %q", packageName, conflictingImportPath)
+	}
+
+	if !exists {
+		if i.importsByPath == nil {
+			i.importsByPath = map[string]importDef{}
+			i.pathsByName = map[string]string{}
+		}
+
+		def = importDef{
+			packageName: packageName,
+			isAlias:     true,
+		}
+		i.importsByPath[importPath] = def
+		i.pathsByName[packageName] = importPath
+	}
+	return def.packageName + ".", nil
+}
+
 // PrefixForPackage returns a prefix to use for qualifying symbols from the
 // given package. This method panics if the given package was never registered.
 func (i *Imports) PrefixForPackage(importPath string) string {
