@@ -3,7 +3,6 @@ package gopoet
 import (
 	"testing"
 
-	"github.com/dgraph-io/badger/v3"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -153,15 +152,6 @@ func TestImportSpecsForFile(t *testing.T) {
 			},
 		},
 		{
-			name: "RegisterImportForPackage respects aliases old API",
-			f: buildFile("a.go", "x/y/z", "z", func(f *GoFile) {
-				f.RegisterImportForPackage(Package{Name: "fooalias", ImportPath: "x/foo"})
-			}),
-			want: []ImportSpec{
-				{PackageAlias: "fooalias", ImportPath: "x/foo"},
-			},
-		},
-		{
 			name: "RegisterImportForPackage respects aliases new method",
 			f: buildFile("a.go", "x/y/z", "z", func(f *GoFile) {
 				f.RegisterAliasedImport("x/foo", "fooalias")
@@ -171,17 +161,17 @@ func TestImportSpecsForFile(t *testing.T) {
 			},
 		},
 		{
-			name: "RegisterImportForPackage consistent with EnsureImported",
+			name: "RegisterImportForPackage should not be used to specify aliases",
 			f: buildFile("a.go", "x/y/z", "z", func(f *GoFile) {
-				f.RegisterImportForPackage(Package{Name: "fooalias", ImportPath: "x/foo"})
+				f.RegisterImportForPackage(Package{Name: "notreallyanalias", ImportPath: "x/foo"})
 			}),
 			want: []ImportSpec{
-				{PackageAlias: "fooalias", ImportPath: "x/foo"},
+				{PackageAlias: "", ImportPath: "x/foo"},
 			},
 			symbols: []ensureImportedExample{
 				{
 					input: NewSymbol("x/foo", "Bar"),
-					want:  "fooalias.Bar",
+					want:  "notreallyanalias.Bar",
 				},
 			},
 		},
@@ -194,7 +184,7 @@ func TestImportSpecsForFile(t *testing.T) {
 			for _, ttt := range tt.symbols {
 				got := tt.f.EnsureImported(ttt.input)
 				if got.String() != ttt.want {
-					t.Errorf("EnsureImported(%s) got %q, wanted %q %d", ttt.input, got, ttt.want, badger.BlockCache)
+					t.Errorf("EnsureImported(%s) got %q, wanted %q", ttt.input, got, ttt.want)
 				}
 			}
 		})
