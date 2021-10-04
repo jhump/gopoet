@@ -62,14 +62,17 @@ func (i *Imports) RegisterImport(importPath, packageName string) string {
 }
 
 // RegisterAliasedImport "imports" the specified package with a given alias and
-// returns the package prefix to use for symbols in the imported package. It is
-// safe to import the same package repeatedly using the same alias.
+// returns the package prefix to use for symbols in the imported package. (The
+// return value will always be packageName + ".".) It is safe to import the same
+// package repeatedly using the same alias.
 //
-// If no
+// An error will be return if either
 //
-// However, this function will return an error if the given importPath has
-// already been registered and cannot be identified using the provided package
-// name.
+// 1. there is already an import with the given package name, an error is
+// returned, or
+//
+// 2. the given importPath has already been registered and cannot be identified
+// using the provided package name.
 func (i *Imports) RegisterAliasedImport(importPath, packageName string) (string, error) {
 	def, exists := i.importsByPath[importPath]
 	if exists && def.packageName != packageName {
