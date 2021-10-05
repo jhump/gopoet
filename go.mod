@@ -7,4 +7,5 @@ require (
 	github.com/nishanths/predeclared v0.0.0-20200524104333-86fad755b4d3 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
+	github.com/google/go-cmp v0.5.6
 )

@@ -8,6 +8,40 @@ import (
 	"strconv"
 )
 
+// ImportsOption is an option that can be passed to NewImportsFor to customize
+// its behavior.
+type ImportsOption struct {
+	apply func(*Imports)
+}
+
+// CustomPackageNameSuggester returns an option for customizing how an Imports
+// object chooses the package name to use for an import path and whether that
+// package name is an alias.
+//
+// The suggestion function takes three arguments:
+//
+// 1) importPath is the path of the package being imported, such as "x/y/z" in
+// the import `import x "x/y/z"`.
+//
+// 2) packageNameInPackageClause is the name of the package from the package
+// clause of Go files that define the package. This is often the last element of
+// the import path, but it frequently differs. For example, "blah" is typically
+// the package name for an import like "x/y/blah/v3" because of how Go's module
+// system works. This value may also be the empty string, which indicates the
+// package name is unknown.
+//
+// 3) callback is the function that should be called with package name
+// suggestions. fn should call the callback function with different candidate
+// names until the callback returns false, at which point the function should
+// stop suggesting package names. The arguments to the callback are the package
+// name to use and whether or not that package name should be considered an
+// alias.
+func CustomPackageNameSuggester(fn func(importPath, packageNameInPackageClause string, callback func(packageName string, isAlias bool) (keepGoing bool))) ImportsOption {
+	return ImportsOption{
+		func(i *Imports) { i.customSuggestPackageNames = fn },
+	}
+}
+
 // Imports accumulate a set of package imports, used for generating a Go source
 // file and accumulating references to other packages. As packages are imported,
 // they will be assigned aliases if necessary (e.g. two imported packages
@@ -15,9 +49,10 @@ import (
 //
 // Imports is not thread-safe.
 type Imports struct {
-	pkgPath       string
-	importsByPath map[string]importDef
-	pathsByName   map[string]string
+	pkgPath                   string
+	importsByPath             map[string]importDef
+	pathsByName               map[string]string
+	customSuggestPackageNames func(importPath, packageNameInPackageClause string, callback func(packageName string, isAlias bool) (keepGoing bool))
 }
 
 type importDef struct {
@@ -28,8 +63,12 @@ type importDef struct {
 // NewImportsFor returns a new Imports where the source lives in pkgPath. So any
 // uses of other symbols also in pkgPath will not need an import and will not
 // use a package prefix (see EnsureImported).
-func NewImportsFor(pkgPath string) *Imports {
-	return &Imports{pkgPath: pkgPath}
+func NewImportsFor(pkgPath string, opts ...ImportsOption) *Imports {
+	i := &Imports{pkgPath: pkgPath}
+	for _, opt := range opts {
+		opt.apply(i)
+	}
+	return i
 }
 
 // RegisterImportForPackage "imports" the specified package and returns the
@@ -79,28 +118,71 @@ func (i *Imports) prefixForPackage(importPath, packageName string, registerIfNot
 		panic(fmt.Sprintf("Package %q never registered", importPath))
 	}
 
-	p := packageName
-	if packageName == "" {
-		p = path.Base(importPath)
-	}
-	pkgBase := p
-	suffix := 1
-	for {
-		if _, ok := i.pathsByName[p]; !ok {
-			if i.importsByPath == nil {
-				i.importsByPath = map[string]importDef{}
-				i.pathsByName = map[string]string{}
-			}
-			i.pathsByName[p] = importPath
-			i.importsByPath[importPath] = importDef{
-				packageName: p,
-				isAlias:     p != packageName,
-			}
-			return p + "."
+	prefix := ""
+	i.suggestPackageNames(importPath, packageName, func(finalPackageName string, isAlias bool) (keepGoing bool) {
+		if _, conflicts := i.pathsByName[finalPackageName]; conflicts {
+			return true // keep sugesting
 		}
-		p = fmt.Sprintf("%s%d", pkgBase, suffix)
-		suffix++
+		if i.importsByPath == nil {
+			i.importsByPath = map[string]importDef{}
+			i.pathsByName = map[string]string{}
+		}
+		i.pathsByName[finalPackageName] = importPath
+		i.importsByPath[importPath] = importDef{
+			packageName: finalPackageName,
+			isAlias:     isAlias,
+		}
+		prefix = finalPackageName + "."
+		return false // finished with suggestions
+	})
+	if prefix == "" {
+		panic(fmt.Errorf("no acceptable suggestion found for importing %q", importPath))
 	}
+	return prefix
+}
+
+func (i *Imports) suggestPackageNames(importPath, packageNameInPackageClause string, callback func(packageName string, isAlias bool) (keepGoing bool)) {
+	fn := i.customSuggestPackageNames
+	if fn == nil {
+		fn = defaultSuggestPackageNames
+	}
+	fn(importPath, packageNameInPackageClause, callback)
+}
+
+// defaultSuggestPackageNames calls callback with a series of suggested package names
+// for the given importPath and assumed package name until the callback returns
+// false.
+func defaultSuggestPackageNames(importPath, packageNameInPackageClause string, callback func(packageName string, isAlias bool) (keepGoing bool)) {
+	actualPackageNameUnknown := packageNameInPackageClause == ""
+	if packageNameInPackageClause == "" {
+		packageNameInPackageClause = importPathToAssumedName(importPath)
+	}
+
+	if !callback(packageNameInPackageClause, actualPackageNameUnknown) {
+		return
+	}
+
+	for suffix := 1; ; suffix++ {
+		packageName := fmt.Sprintf("%s%d", packageNameInPackageClause, suffix)
+		isAlias := actualPackageNameUnknown || packageName != packageNameInPackageClause
+		if !callback(packageName, isAlias) {
+			return
+		}
+	}
+}
+
+// importPathToAssumedName returns the assumed name of the package according the
+// the package definition's package clause based purely on the package's import
+// path.
+//
+// Per https://golang.org/ref/spec#Import_declarations: "If the PackageName is
+// omitted, it defaults to the identifier specified in the package clause of the
+// imported package." The file being loaded is not available in gopoet (and many
+// go tools), so this function needs to be used.
+func importPathToAssumedName(importPath string) string {
+	// Note: path.Base differs from the package name guesser used by most
+	// tools. See https://pkg.go.dev/golang.org/x/tools/internal/imports#ImportPathToAssumedName.
+	return path.Base(importPath)
 }
 
 // EnsureImported ensures that the given symbol is imported and returns a new
