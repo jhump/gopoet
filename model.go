@@ -12,7 +12,6 @@ import (
 
 	"go/format"
 	"go/types"
-	"path"
 	"strconv"
 	"text/template"
 )
@@ -41,7 +40,7 @@ type Package struct {
 // prefix.
 func NewPackage(importPath string) Package {
 	return Package{
-		Name:       path.Base(importPath),
+		Name:       importPathToAssumedName(importPath),
 		ImportPath: importPath,
 	}
 }
@@ -272,6 +271,18 @@ func WriteGoFilesToGoPath(files ...*GoFile) error {
 	return WriteGoFilesToFileSystem(paths[0], files...)
 }
 
+// GoFileOption is an option that can be passed to NewGoFile to customize
+// the behavior of the file.
+type GoFileOption struct {
+	importsOpts []ImportsOption
+}
+
+// GoFileImportsOption returns an option that can be passed to NewGoFile to
+// configure the behavior of its embedded Imports object.
+func GoFileImportsOption(opts ...ImportsOption) GoFileOption {
+	return GoFileOption{opts}
+}
+
 // NewGoFile creates a new Go file with the given name and package information.
 // The given package path is used to ensure that all referenced elements are
 // correctly qualified: e.g. if other elements are in the same package they do
@@ -279,7 +290,7 @@ func WriteGoFilesToGoPath(files ...*GoFile) error {
 //
 // The given package name will be referenced in the package statement at the top
 // of the rendered Go source file.
-func NewGoFile(fileName, packagePath, packageName string) *GoFile {
+func NewGoFile(fileName, packagePath, packageName string, opts ...GoFileOption) *GoFile {
 	if filepath.Base(fileName) != fileName {
 		panic("Go file name must be a base name with no path")
 	}
@@ -287,8 +298,13 @@ func NewGoFile(fileName, packagePath, packageName string) *GoFile {
 		panic("Go file name must have a '.go' extension")
 	}
 
+	var importOptions []ImportsOption
+	for _, opt := range opts {
+		importOptions = append(importOptions, opt.importsOpts...)
+	}
+
 	ret := GoFile{Name: fileName, PackageName: packageName}
-	ret.Imports = *NewImportsFor(packagePath)
+	ret.Imports = *NewImportsFor(packagePath, importOptions...)
 	return &ret
 }
 

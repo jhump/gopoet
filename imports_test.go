@@ -1,6 +1,7 @@
 package gopoet
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -18,7 +19,6 @@ func TestImportPackages(t *testing.T) {
 }
 
 func doRegisterImport(t *testing.T, fn func(imp *Imports, pkgPath, name string) string) {
-	t.Helper()
 	checkPrefix := func(actual, expected string) {
 		if actual != expected {
 			t.Errorf("wrong import prefix: expected %q, got %q", expected, actual)
@@ -110,8 +110,8 @@ func doRegisterImport(t *testing.T, fn func(imp *Imports, pkgPath, name string) 
 }
 
 func TestImportSpecsForFile(t *testing.T) {
-	buildFile := func(fileName, packagePath, packageName string, fn func(f *GoFile)) *GoFile {
-		f := NewGoFile(fileName, packagePath, packageName)
+	buildFile := func(packagePath, packageName string, opts []GoFileOption, fn func(f *GoFile)) *GoFile {
+		f := NewGoFile("doesntmatter.go", packagePath, packageName, opts...)
 		fn(f)
 		return f
 	}
@@ -127,7 +127,7 @@ func TestImportSpecsForFile(t *testing.T) {
 	}{
 		{
 			name: "simple",
-			f: buildFile("a.go", "x/y/z", "z", func(f *GoFile) {
+			f: buildFile("x/y/z", "z", nil, func(f *GoFile) {
 				f.EnsureImported(NewSymbol("x/foo", "Example"))
 			}),
 			want: []ImportSpec{
@@ -136,7 +136,7 @@ func TestImportSpecsForFile(t *testing.T) {
 		},
 		{
 			name: "collision",
-			f: buildFile("a.go", "x/y/z", "z", func(f *GoFile) {
+			f: buildFile("x/y/z", "z", nil, func(f *GoFile) {
 				f.EnsureImported(NewSymbol("x/foo", "ExampleX"))
 				f.EnsureImported(NewSymbol("y/foo", "ExampleY"))
 			}),
@@ -152,17 +152,74 @@ func TestImportSpecsForFile(t *testing.T) {
 			},
 		},
 		{
-			name: "RegisterImportForPackage respects aliases new method",
-			f: buildFile("a.go", "x/y/z", "z", func(f *GoFile) {
-				f.RegisterAliasedImport("x/foo", "fooalias")
+			name: "CustomPackageNameSuggester 1",
+			f: buildFile("x/y/z", "z", []GoFileOption{
+				GoFileImportsOption(CustomPackageNameSuggester(
+					func(importPath, packageNameInPackageClause string, callback func(packageName string, isAlias bool) (keepGoing bool)) {
+						if importPath == "x/foo" {
+							callback("fooalias", true)
+							return
+						}
+						panic(fmt.Errorf("unexpected import path %q", importPath))
+					})),
+			}, func(f *GoFile) {
+				f.RegisterImport("x/foo", "")
 			}),
 			want: []ImportSpec{
 				{PackageAlias: "fooalias", ImportPath: "x/foo"},
 			},
 		},
 		{
+			name: "CustomPackageNameSuggester 2 - alias",
+			f: buildFile("x/y/z", "z", []GoFileOption{
+				GoFileImportsOption(CustomPackageNameSuggester(
+					func(importPath, packageNameInPackageClause string, callback func(packageName string, isAlias bool) (keepGoing bool)) {
+						if importPath == "x/foo" {
+							callback("foo", true)
+							return
+						}
+						panic(fmt.Errorf("unexpected import path %q", importPath))
+					})),
+			}, func(f *GoFile) {
+				f.RegisterImport("x/foo", "")
+			}),
+			want: []ImportSpec{
+				{PackageAlias: "foo", ImportPath: "x/foo"},
+			},
+			symbols: []ensureImportedExample{
+				{
+					input: NewSymbol("x/foo", "Bar"),
+					want:  "foo.Bar",
+				},
+			},
+		},
+		{
+			name: "CustomPackageNameSuggester 3 - non alias differs from path.Base",
+			f: buildFile("x/y/z", "z", []GoFileOption{
+				GoFileImportsOption(CustomPackageNameSuggester(
+					func(importPath, packageNameInPackageClause string, callback func(packageName string, isAlias bool) (keepGoing bool)) {
+						if importPath == "x/foo" {
+							callback("foonotalias", false)
+							return
+						}
+						panic(fmt.Errorf("unexpected import path %q", importPath))
+					})),
+			}, func(f *GoFile) {
+				f.RegisterImport("x/foo", "")
+			}),
+			want: []ImportSpec{
+				{PackageAlias: "", ImportPath: "x/foo"},
+			},
+			symbols: []ensureImportedExample{
+				{
+					input: NewSymbol("x/foo", "Bar"),
+					want:  "foonotalias.Bar",
+				},
+			},
+		},
+		{
 			name: "RegisterImportForPackage should not be used to specify aliases",
-			f: buildFile("a.go", "x/y/z", "z", func(f *GoFile) {
+			f: buildFile("x/y/z", "z", nil, func(f *GoFile) {
 				f.RegisterImportForPackage(Package{Name: "notreallyanalias", ImportPath: "x/foo"})
 			}),
 			want: []ImportSpec{
