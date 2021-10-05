@@ -28,7 +28,7 @@ type ImportsOption struct {
 // the import path, but it frequently differs. For example, "blah" is typically
 // the package name for an import like "x/y/blah/v3" because of how Go's module
 // system works. This value may also be the empty string, which indicates the
-// package name is uknown.
+// package name is unknown.
 //
 // 3) callback is the function that should be called with package name
 // suggestions. fn should call the callback function with different candidate
